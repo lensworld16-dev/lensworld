@@ -1465,7 +1465,7 @@ export const UI = {
 
   // Render Admin Dashboard (Owner Portal with Auth Guard)
   renderAdminDashboard(activeTab = 'orders') {
-    if (sessionStorage.getItem('lens_admin_auth') !== 'true') {
+    if (!window.isAdminAuthenticated) {
       return this.renderAdminLogin();
     }
 

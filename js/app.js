@@ -932,20 +932,22 @@ window.showToast = function(message, type = 'success') {
 };
 
 // Admin Password Protection Handlers
+window.isAdminAuthenticated = false;
+
 window.handleAdminLogin = function(event) {
   if (event) event.preventDefault();
   const input = document.getElementById('admin-pass-input');
   const pass = input ? input.value.trim() : '';
 
   if (pass === 'Aajkalparso@3' || pass === 'adminworld.' || pass === 'Aajkalparso') {
-    sessionStorage.setItem('lens_admin_auth', 'true');
+    window.isAdminAuthenticated = true;
     store.showToast('✓ Welcome to LENS S WORLD Owner Portal!', 'success');
     
     // Extract tab from URL if present
     const hash = window.location.hash || '';
-    let tab = 'products';
+    let tab = 'orders';
     if (hash.includes('tab=')) {
-      tab = hash.split('tab=')[1] || 'products';
+      tab = hash.split('tab=')[1] || 'orders';
     }
     
     const mainApp = document.getElementById('app-main');
@@ -960,7 +962,7 @@ window.handleAdminLogin = function(event) {
 };
 
 window.handleAdminLogout = function() {
-  sessionStorage.removeItem('lens_admin_auth');
+  window.isAdminAuthenticated = false;
   store.showToast('Logged out of Admin Portal', 'info');
   window.location.hash = '#home';
 };
