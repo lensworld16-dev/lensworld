@@ -21,9 +21,10 @@ export const CATEGORIES = [
   { key: "all", label: "All Eyewear" },
   { key: "eyeglasses", label: "Eyeglasses" },
   { key: "sunglasses", label: "Sunglasses" },
-  { key: "lenses-guide", label: "Lenses Guide" },
-  { key: "contact-lenses", label: "Contact Lenses" },
-  { key: "reading-glasses", label: "Reading Glasses" },
+  { key: "power-specs", label: "Power Specs" },
+  { key: "contact-lenses", label: "Contact Lens" },
+  { key: "reading-glasses", label: "Readers" },
+  { key: "lenses", label: "Lens" },
   { key: "accessories", label: "Accessories" }
 ];
 
@@ -49,12 +50,13 @@ export const GENDER_CATEGORIES = [
 ];
 
 export const DEFAULT_CATEGORY_IMAGES = {
-  // Top Story Circles
-  story_new_arrival: "https://chashmah.com/wp-content/uploads/2026/08/1001073265_768x768.webp",
+  // Top Story Circles (Order: Eyeglasses, Sunglasses, Power Specs, Contact Lens, Readers, Lens, Accessories)
   story_eyeglasses: "https://chashmah.com/wp-content/uploads/2026/08/1001073249_cropped_768x768.webp",
   story_sunglasses: "https://chashmah.com/wp-content/uploads/2026/08/1001073284_768x768.webp",
   story_power_specs: "https://chashmah.com/wp-content/uploads/2026/08/1001073289_768x768.webp",
+  story_contact_lenses: "images/contact_lens_circle.jpg",
   story_readers: "https://chashmah.com/wp-content/uploads/2026/08/1001073293_768x768.webp",
+  story_lenses: "https://chashmah.com/wp-content/uploads/2026/08/modern-Silver-rimless-eyeglasses-for-Sikh-LDX178-4.webp",
   story_accessories: "https://chashmah.com/wp-content/uploads/2026/08/1001073223_768x768.webp",
 
   // Eyeglasses Demographics
@@ -452,9 +454,9 @@ export const INITIAL_PRODUCTS = [
     name: "LENS S WORLD AquaSoft Monthly",
     type: "contact-lenses",
     shape: "Soft Lens",
-    img: "https://chashmah.com/wp-content/uploads/2026/08/1001073293_768x768.webp",
+    img: "images/contact_lens_circle.jpg",
     gallery: [
-      "https://chashmah.com/wp-content/uploads/2026/08/1001073293_768x768.webp"
+      "images/contact_lens_circle.jpg"
     ],
     color: "Clear (With Visibility Tint)",
     colors: ["Clear"],
@@ -487,9 +489,9 @@ export const INITIAL_PRODUCTS = [
     name: "LENS S WORLD DailyClear Contacts",
     type: "contact-lenses",
     shape: "Soft Lens",
-    img: "https://chashmah.com/wp-content/uploads/2026/08/1001073289_768x768.webp",
+    img: "images/contact_lens_circle.jpg",
     gallery: [
-      "https://chashmah.com/wp-content/uploads/2026/08/1001073289_768x768.webp"
+      "images/contact_lens_circle.jpg"
     ],
     color: "Clear",
     colors: ["Clear"],

@@ -77,18 +77,29 @@ export default function Footer({ setCurrentRoute, onSelectCategory }) {
           <div className="lg:col-span-2 space-y-4">
             <div 
               onClick={() => setCurrentRoute({ name: 'home' })}
-              className="flex items-center gap-2.5 cursor-pointer"
+              className="cursor-pointer"
             >
-              <div className="w-10 h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center shadow-lg">
-                <Glasses className="w-6 h-6" />
-              </div>
-              <div>
-                <span className="block font-display text-2xl font-bold tracking-tight text-white leading-none">
-                  LENS <span className="text-teal-400">S</span> WORLD
-                </span>
-                <span className="block text-[9px] font-bold tracking-[0.22em] text-teal-400 uppercase mt-0.5">
-                  Nayi Nazar, Naya Style
-                </span>
+              <img 
+                src="images/lenss_world_logo_with_name-removebg-preview.png" 
+                alt="LENS S WORLD" 
+                className="h-12 max-w-[220px] object-contain mb-2"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = 'flex';
+                }}
+              />
+              <div className="hidden items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center shadow-lg">
+                  <Glasses className="w-6 h-6" />
+                </div>
+                <div>
+                  <span className="block font-display text-2xl font-bold tracking-tight text-white leading-none">
+                    LENS <span className="text-teal-400">S</span> WORLD
+                  </span>
+                  <span className="block text-[9px] font-bold tracking-[0.22em] text-teal-400 uppercase mt-0.5">
+                    Nayi Nazar, Naya Style
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -155,7 +166,7 @@ export default function Footer({ setCurrentRoute, onSelectCategory }) {
                   onClick={() => { onSelectCategory('eyeglasses'); setCurrentRoute({ name: 'shop' }); }}
                   className="hover:text-white transition"
                 >
-                  Eyeglasses & Frames
+                  Eyeglasses
                 </button>
               </li>
               <li>
@@ -163,31 +174,39 @@ export default function Footer({ setCurrentRoute, onSelectCategory }) {
                   onClick={() => { onSelectCategory('sunglasses'); setCurrentRoute({ name: 'shop' }); }}
                   className="hover:text-white transition"
                 >
-                  Polarized Sunglasses
+                  Sunglasses
                 </button>
               </li>
               <li>
                 <button 
-                  onClick={() => setCurrentRoute({ name: 'lenses-guide' })}
+                  onClick={() => { onSelectCategory('power-specs'); setCurrentRoute({ name: 'shop' }); }}
                   className="hover:text-white transition"
                 >
-                  Prescription Lens Packages
+                  Power Specs
                 </button>
               </li>
               <li>
                 <button 
-                  onClick={() => setCurrentRoute({ name: 'contact-lenses' })}
+                  onClick={() => { onSelectCategory('contact-lenses'); setCurrentRoute({ name: 'shop' }); }}
                   className="hover:text-white transition"
                 >
-                  Contact Lenses (Daily / Monthly)
+                  Contact Lens
                 </button>
               </li>
               <li>
                 <button 
-                  onClick={() => setCurrentRoute({ name: 'reading-glasses' })}
+                  onClick={() => { onSelectCategory('reading-glasses'); setCurrentRoute({ name: 'shop' }); }}
                   className="hover:text-white transition"
                 >
-                  Reading Glasses (+1.00 to +3.50)
+                  Readers
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={() => { onSelectCategory('lenses'); setCurrentRoute({ name: 'shop' }); }}
+                  className="hover:text-white transition"
+                >
+                  Lens
                 </button>
               </li>
               <li>
@@ -195,7 +214,7 @@ export default function Footer({ setCurrentRoute, onSelectCategory }) {
                   onClick={() => { onSelectCategory('accessories'); setCurrentRoute({ name: 'shop' }); }}
                   className="hover:text-white transition"
                 >
-                  Cleaning Kits & Accessories
+                  Accessories
                 </button>
               </li>
             </ul>

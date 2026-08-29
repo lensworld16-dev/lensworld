@@ -63,9 +63,10 @@ export default function Navbar({ currentRoute, setCurrentRoute, onSelectCategory
   const navLinks = [
     { label: 'Eyeglasses', route: 'shop', category: 'eyeglasses' },
     { label: 'Sunglasses', route: 'shop', category: 'sunglasses' },
-    { label: 'Lenses Guide', route: 'lenses-guide' },
-    { label: 'Contact Lenses', route: 'contact-lenses' },
-    { label: 'Reading Glasses', route: 'reading-glasses' },
+    { label: 'Power Specs', route: 'shop', category: 'power-specs' },
+    { label: 'Contact Lens', route: 'shop', category: 'contact-lenses' },
+    { label: 'Readers', route: 'shop', category: 'reading-glasses' },
+    { label: 'Lens', route: 'shop', category: 'lenses' },
     { label: 'Accessories', route: 'shop', category: 'accessories' },
     { label: '🔥 Offers', route: 'offers', highlight: true },
     { label: 'Track Order', route: 'track-order' }
@@ -107,23 +108,35 @@ export default function Navbar({ currentRoute, setCurrentRoute, onSelectCategory
         </div>
       </div>
 
-      {/* 2. Main Header Bar - Compact & Low Height */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between gap-3">
-        {/* Brand Logo */}
+      {/* 2. Main Header Bar - Prominent on Desktop, Ultra-Compact on Mobile */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-1.5 sm:py-2.5 flex items-center justify-between gap-2 sm:gap-3">
+        {/* Brand Logo - Enlarged on Desktop & Slim on Mobile */}
         <div 
           onClick={() => setCurrentRoute({ name: 'home' })}
           className="flex items-center gap-2 cursor-pointer group shrink-0"
         >
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-teal-700 text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition">
-            <Glasses className="w-4 h-4" />
-          </div>
-          <div>
-            <span className="block font-display text-base sm:text-lg font-extrabold tracking-tight text-slate-900 leading-none">
-              LENS <span className="text-teal-700">S</span> WORLD
-            </span>
-            <span className="block text-[7px] sm:text-[8px] font-bold tracking-[0.18em] text-slate-400 uppercase mt-0.5">
-              Nayi Nazar, Naya Style
-            </span>
+          <img 
+            src="images/lenss_world_logo_with_name-removebg-preview.png" 
+            alt="LENS S WORLD" 
+            className="h-11 sm:h-10 md:h-11 max-w-[185px] sm:max-w-[210px] object-contain transition group-hover:scale-105"
+            onError={(e) => {
+              // Fallback if image not loaded directly
+              e.currentTarget.style.display = 'none';
+              if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = 'flex';
+            }}
+          />
+          <div className="hidden items-center gap-2">
+            <div className="w-9 h-9 rounded-lg bg-teal-700 text-white flex items-center justify-center shadow-sm">
+              <Glasses className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="block font-display text-lg font-extrabold tracking-tight text-slate-900 leading-none">
+                LENS <span className="text-teal-700">S</span> WORLD
+              </span>
+              <span className="block text-[8px] font-bold tracking-[0.18em] text-slate-400 uppercase mt-0.5">
+                Nayi Nazar, Naya Style
+              </span>
+            </div>
           </div>
         </div>
 

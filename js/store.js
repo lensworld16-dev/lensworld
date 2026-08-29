@@ -54,7 +54,17 @@ class Store {
     // 5. Categories State
     try {
       const saved = localStorage.getItem("lsw_categories");
-      this.categories = saved ? JSON.parse(saved) : CATEGORIES;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.some(c => c.key === 'lenses-guide') || !parsed.some(c => c.key === 'power-specs')) {
+          this.categories = CATEGORIES;
+          localStorage.setItem("lsw_categories", JSON.stringify(CATEGORIES));
+        } else {
+          this.categories = parsed;
+        }
+      } else {
+        this.categories = CATEGORIES;
+      }
     } catch {
       this.categories = CATEGORIES;
     }

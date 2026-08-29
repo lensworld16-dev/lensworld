@@ -879,12 +879,13 @@ window.saveCategoryImagesForm = function(event) {
   };
 
   const updatedImages = {
-    // Circles
-    story_new_arrival: getVal('catimg_story_new_arrival'),
+    // Circles (Eyeglasses, Sunglasses, Power Specs, Contact Lens, Readers, Lens, Accessories)
     story_eyeglasses: getVal('catimg_story_eyeglasses'),
     story_sunglasses: getVal('catimg_story_sunglasses'),
     story_power_specs: getVal('catimg_story_power_specs'),
+    story_contact_lenses: getVal('catimg_story_contact_lenses'),
     story_readers: getVal('catimg_story_readers'),
+    story_lenses: getVal('catimg_story_lenses'),
     story_accessories: getVal('catimg_story_accessories'),
 
     // Eyeglasses

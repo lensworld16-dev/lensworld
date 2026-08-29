@@ -737,8 +737,10 @@ export default function AdminDashboardPage({ setCurrentRoute }) {
                   >
                     <option value="eyeglasses">Eyeglasses</option>
                     <option value="sunglasses">Sunglasses</option>
-                    <option value="reading-glasses">Reading Glasses</option>
-                    <option value="contact-lenses">Contact Lenses</option>
+                    <option value="power-specs">Power Specs</option>
+                    <option value="contact-lenses">Contact Lens</option>
+                    <option value="reading-glasses">Readers</option>
+                    <option value="lenses">Lens</option>
                     <option value="accessories">Accessories</option>
                   </select>
                 </div>

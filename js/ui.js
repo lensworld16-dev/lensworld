@@ -84,17 +84,10 @@ export const UI = {
     const readers = store.products.filter(p => p.type === 'reading-glasses' || p.type === 'contact-lenses' || p.type === 'accessories');
 
     return `
-      <!-- Top Story Circles Carousel (Instagram/Chashmah Mobile Style) -->
+      <!-- Top Story Circles Carousel (Exact Categories: Eyeglasses, Sunglasses, Power Specs, Contact Lens, Readers, Lens, Accessories) -->
       <section class="story-circles-section">
         <div class="container">
           <div class="story-circles-wrap">
-            <a href="#shop" class="story-circle-item">
-              <div class="story-circle-avatar">
-                <img src="${store.getCatImg('story_new_arrival', 'https://chashmah.com/wp-content/uploads/2026/08/1001073265_768x768.webp')}" alt="New Arrival" />
-              </div>
-              <span class="story-circle-label">New Arrival</span>
-            </a>
-
             <a href="#shop?category=eyeglasses" class="story-circle-item">
               <div class="story-circle-avatar">
                 <img src="${store.getCatImg('story_eyeglasses', 'https://chashmah.com/wp-content/uploads/2026/08/1001073249_cropped_768x768.webp')}" alt="Eyeglasses" />
@@ -109,11 +102,18 @@ export const UI = {
               <span class="story-circle-label">Sunglasses</span>
             </a>
 
-            <a href="#shop?category=reading-glasses" class="story-circle-item">
+            <a href="#shop?category=power-specs" class="story-circle-item">
               <div class="story-circle-avatar">
                 <img src="${store.getCatImg('story_power_specs', 'https://chashmah.com/wp-content/uploads/2026/08/1001073289_768x768.webp')}" alt="Power Specs" />
               </div>
               <span class="story-circle-label">Power Specs</span>
+            </a>
+
+            <a href="#shop?category=contact-lenses" class="story-circle-item">
+              <div class="story-circle-avatar">
+                <img src="${store.getCatImg('story_contact_lenses', 'https://images.unsplash.com/photo-1587593810167-a84920ea0781?auto=format&fit=crop&w=600&q=80')}" alt="Contact Lens" />
+              </div>
+              <span class="story-circle-label">Contact Lens</span>
             </a>
 
             <a href="#shop?category=reading-glasses" class="story-circle-item">
@@ -121,6 +121,13 @@ export const UI = {
                 <img src="${store.getCatImg('story_readers', 'https://chashmah.com/wp-content/uploads/2026/08/1001073293_768x768.webp')}" alt="Readers" />
               </div>
               <span class="story-circle-label">Readers</span>
+            </a>
+
+            <a href="#shop?category=lenses" class="story-circle-item">
+              <div class="story-circle-avatar">
+                <img src="${store.getCatImg('story_lenses', 'https://chashmah.com/wp-content/uploads/2026/08/modern-Silver-rimless-eyeglasses-for-Sikh-LDX178-4.webp')}" alt="Lens" />
+              </div>
+              <span class="story-circle-label">Lens</span>
             </a>
 
             <a href="#shop?category=accessories" class="story-circle-item">
@@ -402,7 +409,13 @@ export const UI = {
         window.location.hash = '#lenses-guide';
         return '';
       }
-      filtered = filtered.filter(p => p.type === category);
+      if (category === 'power-specs') {
+        filtered = filtered.filter(p => p.type === 'power-specs' || p.type === 'reading-glasses');
+      } else if (category === 'reading-glasses') {
+        filtered = filtered.filter(p => p.type === 'reading-glasses' || p.type === 'power-specs');
+      } else {
+        filtered = filtered.filter(p => p.type === category);
+      }
     }
 
     if (gender && gender !== 'all') {
@@ -1964,11 +1977,12 @@ export const UI = {
                 </h4>
                 <div class="admin-grid-3">
                   ${[
-                    { id: 'story_new_arrival', label: 'New Arrival Circle' },
                     { id: 'story_eyeglasses', label: 'Eyeglasses Circle' },
                     { id: 'story_sunglasses', label: 'Sunglasses Circle' },
                     { id: 'story_power_specs', label: 'Power Specs Circle' },
+                    { id: 'story_contact_lenses', label: 'Contact Lens Circle' },
                     { id: 'story_readers', label: 'Readers Circle' },
+                    { id: 'story_lenses', label: 'Lens Circle' },
                     { id: 'story_accessories', label: 'Accessories Circle' }
                   ].map(c => `
                     <div class="admin-card-inner" style="background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem;">

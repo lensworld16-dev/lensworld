@@ -225,8 +225,9 @@ input, select, textarea {
 }
 
 .site-brand-logo-img {
-  height: 52px;
-  max-width: 220px;
+  height: 48px;
+  max-height: 52px;
+  max-width: 210px;
   object-fit: contain;
   display: block;
   transition: transform 0.2s ease;
@@ -238,11 +239,29 @@ input, select, textarea {
 
 @media (max-width: 768px) {
   .header-main {
-    padding: 0.5rem 0;
+    padding: 0.35rem 0;
+    gap: 0.5rem;
   }
   .site-brand-logo-img {
-    height: 44px;
-    max-width: 175px;
+    height: 48px;
+    max-height: 52px;
+    max-width: 185px;
+  }
+  .top-bar {
+    padding: 2px 0;
+    height: 24px;
+  }
+  .ticker-item {
+    font-size: 10.5px;
+    padding-right: 25px;
+  }
+  .ticker-cta-btn {
+    padding: 1px 8px;
+    font-size: 10px;
+  }
+  .icon-btn {
+    width: 30px;
+    height: 30px;
   }
 }
 
@@ -3308,28 +3327,29 @@ input, select, textarea {
    Footer (Compact & Sleek Navy Theme)
    ========================================================================== */
 .site-footer {
-  background: #000040;
-  color: #94a3b8;
+  background: #f8fafc;
+  color: #475569;
+  border-top: 1px solid #e2e8f0;
   margin-top: auto;
-  padding: 1.15rem 0 0.75rem;
-  font-size: 0.76rem;
+  padding: 2.25rem 0 1.25rem;
+  font-size: 0.8rem;
 }
 
 .footer-grid {
   display: grid;
   grid-template-columns: 1.3fr 0.9fr 0.9fr 1fr;
-  gap: 1rem;
-  margin-bottom: 0.75rem;
+  gap: 1.5rem;
+  margin-bottom: 1.25rem;
 }
 
 @media (max-width: 768px) {
   .site-footer {
-    padding: 0.85rem 0 0.65rem;
+    padding: 1.5rem 0 1rem;
   }
   .footer-grid {
     grid-template-columns: 1fr 1fr;
-    gap: 0.75rem 0.5rem;
-    margin-bottom: 0.5rem;
+    gap: 1.25rem 0.75rem;
+    margin-bottom: 1rem;
   }
   .footer-brand {
     grid-column: span 2;
@@ -3337,62 +3357,63 @@ input, select, textarea {
 }
 
 .footer-brand h4 {
-  color: #ffffff;
-  font-size: 0.95rem;
+  color: #000040;
+  font-size: 1rem;
   font-weight: 800;
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.35rem;
   letter-spacing: -0.01em;
 }
 
 .footer-brand p {
-  font-size: 0.7rem;
-  line-height: 1.3;
-  color: #94a3b8;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: #64748b;
   max-width: 320px;
 }
 
 .footer-col h5 {
-  color: #ffffff;
-  font-size: 0.76rem;
+  color: #000040;
+  font-size: 0.82rem;
   font-weight: 700;
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.6rem;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
 }
 
 .footer-links {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 0.18rem;
+  gap: 0.35rem;
 }
 
 .footer-links li {
-  font-size: 0.7rem;
-  color: #cbd5e1;
-  line-height: 1.25;
+  font-size: 0.78rem;
+  color: #475569;
+  line-height: 1.4;
 }
 
 .footer-links a {
-  font-size: 0.7rem;
-  color: #cbd5e1;
+  font-size: 0.78rem;
+  color: #475569;
   text-decoration: none;
-  transition: color 0.2s;
+  transition: color 0.2s, transform 0.2s;
 }
 
 .footer-links a:hover {
-  color: #ffffff;
+  color: #000040;
+  font-weight: 600;
 }
 
 .footer-bottom {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding-top: 0.55rem;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.25rem;
-  font-size: 0.66rem;
+  gap: 0.5rem;
+  font-size: 0.75rem;
   color: #64748b;
 }
 
