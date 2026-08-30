@@ -28,6 +28,7 @@ export default function HomePage({ setCurrentRoute, onSelectCategory, onSelectPr
 
   const bestSellers = products.filter(p => p.bestSeller).slice(0, 4);
   const newArrivals = products.filter(p => p.isNew || p.type === 'sunglasses').slice(0, 4);
+  const featuredReaders = products.filter(p => p.type === 'reading-glasses').slice(0, 4);
 
   const testimonials = [
     {
@@ -303,6 +304,41 @@ export default function HomePage({ setCurrentRoute, onSelectCategory, onSelectPr
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {bestSellers.map(product => (
+            <ProductCard 
+              key={product.id} 
+              product={product} 
+              onSelectProduct={onSelectProduct}
+              onOpenLensModal={onOpenLensModal}
+            />
+          ))}
+        </div>
+      </section>
+
+      {/* 4.5. Featured Reading Glasses Collection (4 Items) */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-end justify-between mb-8">
+          <div>
+            <span className="text-xs font-extrabold uppercase tracking-widest text-purple-600 block mb-1">
+              Instant Power Specs (+1.00 to +3.00)
+            </span>
+            <h2 className="font-display text-xl sm:text-2xl font-extrabold text-slate-900">
+              Reading Glasses Collection
+            </h2>
+          </div>
+          <button
+            onClick={() => {
+              onSelectCategory('reading-glasses');
+              setCurrentRoute({ name: 'shop' });
+            }}
+            className="text-xs font-bold text-teal-700 hover:text-teal-900 flex items-center gap-1"
+          >
+            <span>View All Readers ({products.filter(p => p.type === 'reading-glasses').length})</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {featuredReaders.map(product => (
             <ProductCard 
               key={product.id} 
               product={product} 

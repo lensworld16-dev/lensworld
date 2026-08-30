@@ -453,7 +453,11 @@ export default function AdminDashboardPage({ setCurrentRoute }) {
                             <span className="font-bold text-slate-800 block">
                               {order.items?.[0]?.name} {order.items?.length > 1 ? `+${order.items.length - 1} more` : ''}
                             </span>
-                            {order.items?.[0]?.selectedLens ? (
+                            {order.items?.[0]?.disposalType ? (
+                              <span className="text-[11px] text-teal-700 font-medium block truncate">
+                                Disposal: {order.items[0].disposalType.name}
+                              </span>
+                            ) : order.items?.[0]?.selectedLens ? (
                               <span className="text-[11px] text-teal-700 font-medium block truncate">
                                 Lens: {order.items[0].selectedLens.name}
                               </span>

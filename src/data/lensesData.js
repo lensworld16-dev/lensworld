@@ -1,15 +1,16 @@
-// Lens Packages & Prescription Matrix Data
+// Lens Packages, Contact Lens Disposals & Prescription Matrix Data
 
 export const LENS_PACKAGES = [
   {
     id: "anti-glare-arc",
-    name: "Anti-Glare ARC Premium Lens",
-    tagline: "Ultra-Clear & Reflection Free",
+    name: "Anti-Glare ARC Lens",
+    tagline: "Reduces glare & reflections for clear vision.",
+    img: "images/anti_glare_arc_lens.jpg",
     price: 599,
     mrp: 1199,
     badge: "Essential",
-    suitableFor: ["eyeglasses", "lenses"],
-    description: "Multi-coated anti-reflective coating reduces nighttime headlight glare, digital reflections, and enhances contrast.",
+    suitableFor: ["eyeglasses", "lenses", "sunglasses"],
+    description: "Multi-coated anti-reflective coating reduces nighttime headlight glare and enhances contrast.",
     features: [
       "99% Light Transmission",
       "Green AR Anti-Reflective Coating",
@@ -20,13 +21,14 @@ export const LENS_PACKAGES = [
   },
   {
     id: "blue-cut-screen",
-    name: "Blue Cut Digital EyeShield™",
-    tagline: "Essential for Mobile & Computer Users",
+    name: "Blue Cut Screen Lens",
+    tagline: "Blocks harmful digital screen blue light.",
+    img: "images/blue_cut_screen_lens.jpg",
     price: 999,
     mrp: 1799,
     badge: "Most Popular",
-    suitableFor: ["eyeglasses", "lenses"],
-    description: "Filters 90%+ harmful high-energy blue-violet light emitted from computers, smartphones, and LED screens to reduce digital eye strain.",
+    suitableFor: ["eyeglasses", "lenses", "sunglasses"],
+    description: "Filters 90%+ harmful blue-violet light emitted from computers, mobiles, and LED screens.",
     features: [
       "UV420 & Blue Light Filter",
       "Reduces Headaches & Digital Fatigue",
@@ -37,13 +39,14 @@ export const LENS_PACKAGES = [
   },
   {
     id: "photochromic-transition",
-    name: "Photochromic 2-in-1 Transition Lens",
-    tagline: "Clear Indoors · Dark Sunglasses Outdoors",
+    name: "Photochromic Transition Lens",
+    tagline: "Darkens outdoors, clear indoors adaptively.",
+    img: "images/photochromic_transition_lens.jpg",
     price: 1499,
     mrp: 2699,
     badge: "Smart Adapt",
-    suitableFor: ["eyeglasses", "lenses"],
-    description: "Smart light-reactive molecules instantly darken under sunlight UV and revert back to fully transparent indoors in seconds.",
+    suitableFor: ["eyeglasses", "lenses", "sunglasses"],
+    description: "Smart light-reactive lenses darken in sunlight UV and turn fully transparent indoors.",
     features: [
       "Fast 30-Second Outdoor Darkening",
       "Complete UV400 Sun Protection",
@@ -54,12 +57,13 @@ export const LENS_PACKAGES = [
   },
   {
     id: "progressive-multifocal",
-    name: "Digital HD Progressive / Multifocal",
-    tagline: "Near + Intermediate + Distance in One Lens",
+    name: "Progressive / Multifocal Lens",
+    tagline: "Near, intermediate & far vision in one lens.",
+    img: "images/progressive_multifocal_lens.jpg",
     price: 2199,
     mrp: 3899,
     badge: "Premium HD",
-    suitableFor: ["eyeglasses", "lenses"],
+    suitableFor: ["eyeglasses", "lenses", "sunglasses"],
     description: "Seamless progressive vision with no visible lines on the lens. Enjoy natural focus from mobile reading to computer screen to driving.",
     features: [
       "No Bifocal Line on Glass",
@@ -71,13 +75,61 @@ export const LENS_PACKAGES = [
   }
 ];
 
+export const CONTACT_LENS_DISPOSAL_TYPES = [
+  {
+    id: "daily",
+    name: "Daily",
+    tagline: "Daily-use contact lens option.",
+    badge: "Most Hygienic",
+    description: "Single-use daily disposable contact lens option. Fresh sterile pair every day with zero cleaning or lens case required.",
+    packInfo: "30 Lenses / Pack (15 Pairs)",
+    priceMultiplier: 1.0
+  },
+  {
+    id: "monthly",
+    name: "Monthly",
+    tagline: "Monthly-use contact lens option.",
+    badge: "Most Popular",
+    description: "Monthly-use contact lens option. High oxygen permeability and moisture lock technology for 30 days comfortable wear.",
+    packInfo: "6 Lenses / Box (3 Pairs - 3 Months)",
+    priceMultiplier: 1.2
+  },
+  {
+    id: "quarterly",
+    name: "Quarterly",
+    tagline: "Quarterly-use contact lens option.",
+    badge: "Extended Wear",
+    description: "Quarterly-use contact lens option. 3-Month durable extended-wear soft contact lenses with soothing hydration.",
+    packInfo: "2 Lenses / Pack (1 Pair - 3 Months)",
+    priceMultiplier: 1.5
+  },
+  {
+    id: "yearly",
+    name: "Yearly",
+    tagline: "Yearly-use contact lens option.",
+    badge: "Annual Value",
+    description: "Yearly-use contact lens option. Premium annual soft contact lenses crafted for maximum comfort and lasting clarity.",
+    packInfo: "2 Lenses / Vial (1 Pair - 1 Year)",
+    priceMultiplier: 2.0
+  }
+];
+
 export const PRESCRIPTION_POWER_OPTIONS = {
   spheres: [
-    "-8.00", "-7.50", "-7.00", "-6.50", "-6.00", "-5.50", "-5.00", "-4.50", "-4.00", "-3.50", "-3.00",
+    "-10.00", "-9.50", "-9.00", "-8.50", "-8.00", "-7.50", "-7.00", "-6.50", "-6.00", "-5.50", "-5.00",
+    "-4.75", "-4.50", "-4.25", "-4.00", "-3.75", "-3.50", "-3.25", "-3.00",
     "-2.75", "-2.50", "-2.25", "-2.00", "-1.75", "-1.50", "-1.25", "-1.00", "-0.75", "-0.50", "-0.25",
     "0.00 (Plano)",
     "+0.25", "+0.50", "+0.75", "+1.00", "+1.25", "+1.50", "+1.75", "+2.00", "+2.25", "+2.50", "+2.75",
     "+3.00", "+3.25", "+3.50", "+3.75", "+4.00", "+4.50", "+5.00", "+5.50", "+6.00"
+  ],
+  contactLensSpheres: [
+    "-10.00", "-9.50", "-9.00", "-8.50", "-8.00", "-7.50", "-7.00", "-6.50", "-6.00", "-5.50", "-5.00",
+    "-4.75", "-4.50", "-4.25", "-4.00", "-3.75", "-3.50", "-3.25", "-3.00",
+    "-2.75", "-2.50", "-2.25", "-2.00", "-1.75", "-1.50", "-1.25", "-1.00", "-0.75", "-0.50",
+    "0.00 (Plano / Cosmetic)",
+    "+0.50", "+0.75", "+1.00", "+1.25", "+1.50", "+1.75", "+2.00", "+2.25", "+2.50", "+2.75",
+    "+3.00", "+3.50", "+4.00", "+4.50", "+5.00", "+5.50", "+6.00"
   ],
   cylinders: [
     "0.00", "-0.25", "-0.50", "-0.75", "-1.00", "-1.25", "-1.50", "-1.75", "-2.00",
@@ -86,5 +138,9 @@ export const PRESCRIPTION_POWER_OPTIONS = {
   ],
   addPowers: [
     "+0.75", "+1.00", "+1.25", "+1.50", "+1.75", "+2.00", "+2.25", "+2.50", "+2.75", "+3.00", "+3.50"
+  ],
+  axis: [
+    "0°", "10°", "20°", "30°", "40°", "50°", "60°", "70°", "80°", "90°",
+    "100°", "110°", "120°", "130°", "140°", "150°", "160°", "170°", "180°"
   ]
 };

@@ -106,7 +106,9 @@ export default function CartDrawer({ onProceedToCheckout, onOpenCartPage }) {
               </div>
             ) : (
               cart.map((item) => {
-                const itemUnitPrice = item.price + (item.selectedLens?.price || 0);
+                const itemUnitPrice = item.disposalType 
+                  ? Math.round(item.price * (item.disposalType.priceMultiplier || 1.0))
+                  : item.price + (item.selectedLens?.price || 0);
                 const itemTotal = itemUnitPrice * item.qty;
 
                 return (
@@ -128,17 +130,37 @@ export default function CartDrawer({ onProceedToCheckout, onOpenCartPage }) {
                         </button>
                       </div>
 
-                      {/* Item details */}
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Color: <span className="text-slate-700 font-medium">{item.selectedColor}</span>
-                      </p>
-                      
-                      {item.selectedLens ? (
-                        <p className="text-[11px] font-semibold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-md inline-block mt-1">
-                          + {item.selectedLens.name} (+₹{item.selectedLens.price})
-                        </p>
+                      {/* Contact Lens Disposal or Eyewear color */}
+                      {item.disposalType ? (
+                        <div className="mt-1 space-y-1">
+                          <span className="text-[11px] font-semibold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-md inline-block">
+                            Disposal: {item.disposalType.name} ({item.disposalType.tagline})
+                          </span>
+                          {item.prescriptionDetails && (
+                            <p className="text-[10px] text-slate-600">
+                              OD: {item.prescriptionDetails.odSphere || '-'} · OS: {item.prescriptionDetails.osSphere || '-'}
+                            </p>
+                          )}
+                          {item.prescriptionFile && (
+                            <p className="text-[10px] text-emerald-700 font-medium">
+                              ✓ Rx File: {item.prescriptionFile.name}
+                            </p>
+                          )}
+                        </div>
                       ) : (
-                        <p className="text-[11px] text-slate-400 mt-0.5">Frame Only (Demo Lenses)</p>
+                        <>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            Color: <span className="text-slate-700 font-medium">{item.selectedColor}</span>
+                          </p>
+                          
+                          {item.selectedLens ? (
+                            <p className="text-[11px] font-semibold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-md inline-block mt-1">
+                              + Lens: {item.selectedLens.name} (+₹{item.selectedLens.price})
+                            </p>
+                          ) : (
+                            <p className="text-[11px] text-slate-400 mt-0.5">Frame Only (Demo Lenses)</p>
+                          )}
+                        </>
                       )}
 
                       {item.readingPower && (

@@ -22,7 +22,8 @@ export function getProductEnquiryUrl(product) {
 export function formatOrderForWhatsApp(order) {
   const itemsText = (order.items || []).map((item, idx) => {
     const colorInfo = item.selectedColor ? ` [${item.selectedColor}]` : "";
-    const lensInfo = item.selectedLens ? `\n   ├ Lens: ${item.selectedLens.name} (+₹${item.selectedLens.price})` : " [Frame Only]";
+    const disposalInfo = item.disposalType ? `\n   ├ Disposal: ${item.disposalType.name} (${item.disposalType.tagline || ''})` : "";
+    const lensInfo = item.selectedLens ? `\n   ├ Lens: ${item.selectedLens.name} (+₹${item.selectedLens.price})` : (!item.disposalType && !item.readingPower ? " [Frame Only]" : "");
     const powerInfo = item.readingPower ? `\n   ├ Reading Power: ${item.readingPower}` : "";
     
     let rxInfo = "";

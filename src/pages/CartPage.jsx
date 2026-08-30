@@ -91,7 +91,9 @@ export default function CartPage({ setCurrentRoute, onSelectProduct }) {
         {/* Left: Items List (8 cols) */}
         <div className="lg:col-span-8 space-y-4">
           {cart.map((item) => {
-            const unitPrice = item.price + (item.selectedLens?.price || 0);
+            const unitPrice = item.disposalType 
+              ? Math.round(item.price * (item.disposalType.priceMultiplier || 1.0))
+              : item.price + (item.selectedLens?.price || 0);
             const itemTotal = unitPrice * item.qty;
 
             return (
@@ -114,19 +116,34 @@ export default function CartPage({ setCurrentRoute, onSelectProduct }) {
                       {item.name}
                     </h3>
                     
-                    <p className="text-xs text-slate-500">
-                      Color: <strong className="text-slate-800 font-semibold">{item.selectedColor}</strong> · SKU: {item.sku}
-                    </p>
-
-                    {/* Lens package pill */}
-                    {item.selectedLens ? (
-                      <div className="inline-block text-[11px] font-semibold text-teal-800 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-100 mt-1">
-                        + Lens: {item.selectedLens.name} (+₹{item.selectedLens.price})
+                    {item.disposalType ? (
+                      <div className="space-y-1">
+                        <div className="inline-block text-[11px] font-semibold text-teal-800 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-100 mt-1">
+                          Disposal: {item.disposalType.name} ({item.disposalType.tagline})
+                        </div>
+                        {item.prescriptionDetails && (
+                          <p className="text-xs text-slate-600 font-medium">
+                            Right (OD): <strong>{item.prescriptionDetails.odSphere || '-'}</strong> · Left (OS): <strong>{item.prescriptionDetails.osSphere || '-'}</strong>
+                          </p>
+                        )}
                       </div>
                     ) : (
-                      <div className="text-[11px] text-slate-400 mt-1">
-                        Frame Only (Non-prescription demo lenses)
-                      </div>
+                      <>
+                        <p className="text-xs text-slate-500">
+                          Color: <strong className="text-slate-800 font-semibold">{item.selectedColor}</strong> · SKU: {item.sku}
+                        </p>
+
+                        {/* Lens package pill */}
+                        {item.selectedLens ? (
+                          <div className="inline-block text-[11px] font-semibold text-teal-800 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-100 mt-1">
+                            + Lens: {item.selectedLens.name} (+₹{item.selectedLens.price})
+                          </div>
+                        ) : (
+                          <div className="text-[11px] text-slate-400 mt-1">
+                            Frame Only (Non-prescription demo lenses)
+                          </div>
+                        )}
+                      </>
                     )}
 
                     {/* Reading power */}

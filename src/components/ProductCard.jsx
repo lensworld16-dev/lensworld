@@ -10,12 +10,14 @@ export default function ProductCard({ product, onSelectProduct, onOpenLensModal 
 
   const handleQuickAdd = (e) => {
     e.stopPropagation();
-    if (product.lensOptionsAvailable) {
+    if (product.lensOptionsAvailable || product.type === 'contact-lenses') {
       onOpenLensModal(product);
     } else {
       addToCart(product);
     }
   };
+
+  const isContact = product.type === 'contact-lenses';
 
   return (
     <div 
@@ -98,7 +100,7 @@ export default function ProductCard({ product, onSelectProduct, onOpenLensModal 
 
           {/* Color & Material Subtitle */}
           <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">
-            {product.color} · {product.material || product.duration || 'Optical Quality'}
+            {isContact ? 'Daily · Monthly · Quarterly · Yearly' : `${product.color} · ${product.material || product.duration || 'Optical Quality'}`}
           </p>
 
           {/* Lens capability tag */}
@@ -106,6 +108,13 @@ export default function ProductCard({ product, onSelectProduct, onOpenLensModal 
             <div className="mt-2 flex items-center gap-1.5 text-[10px] font-semibold text-emerald-700 bg-emerald-50/80 px-2 py-0.5 rounded-md border border-emerald-100">
               <ShieldCheck className="w-3 h-3 text-emerald-600 shrink-0" />
               <span>Prescription & Blue Cut Ready</span>
+            </div>
+          )}
+
+          {isContact && (
+            <div className="mt-2 flex items-center gap-1.5 text-[10px] font-semibold text-teal-700 bg-teal-50/80 px-2 py-0.5 rounded-md border border-teal-100">
+              <ShieldCheck className="w-3 h-3 text-teal-600 shrink-0" />
+              <span>All Powers & Disposals In Stock</span>
             </div>
           )}
         </div>
@@ -132,7 +141,9 @@ export default function ProductCard({ product, onSelectProduct, onOpenLensModal 
             onClick={handleQuickAdd}
             className="flex items-center justify-center gap-1 bg-slate-900 hover:bg-teal-700 text-white text-[11px] font-bold px-3 py-2 rounded-xl shadow-sm transition active:scale-95 shrink-0"
           >
-            {product.lensOptionsAvailable ? (
+            {isContact ? (
+              <>Select Pack</>
+            ) : product.lensOptionsAvailable ? (
               <>Add Lens</>
             ) : (
               <>

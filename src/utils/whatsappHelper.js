@@ -16,12 +16,29 @@ export function getWhatsAppUrl(message = "Hello LENS S WORLD, I need help.") {
 /**
  * Formats full order summary for WhatsApp notification to the owner
  */
-export function formatOrderForWhatsApp(order) {
   const itemsText = (order.items || []).map((item, idx) => {
-    const lensInfo = item.selectedLens ? ` [Lens: ${item.selectedLens.name} (+₹${item.selectedLens.price})]` : " [Frame Only]";
-    const powerInfo = item.readingPower ? ` [Power: ${item.readingPower}]` : "";
-    const colorInfo = item.selectedColor ? ` [Color: ${item.selectedColor}]` : "";
-    return `${idx + 1}. *${item.name}* x${item.qty} — ₹${((item.price + (item.selectedLens?.price || 0)) * item.qty).toLocaleString('en-IN')}${colorInfo}${lensInfo}${powerInfo}`;
+    let itemExtra = "";
+    let unitPrice = item.price;
+    if (item.disposalType) {
+      unitPrice = Math.round(item.price * (item.disposalType.priceMultiplier || 1.0));
+      itemExtra += ` [Disposal: ${item.disposalType.name}]`;
+      if (item.prescriptionDetails) {
+        itemExtra += ` [OD: ${item.prescriptionDetails.odSphere || '-'}, OS: ${item.prescriptionDetails.osSphere || '-'}]`;
+      }
+    } else if (item.selectedLens) {
+      unitPrice = item.price + item.selectedLens.price;
+      itemExtra += ` [Lens: ${item.selectedLens.name} (+₹${item.selectedLens.price})]`;
+      if (item.prescriptionDetails) {
+        itemExtra += ` [OD: ${item.prescriptionDetails.odSphere || '-'} Cyl: ${item.prescriptionDetails.odCyl || '0'}, OS: ${item.prescriptionDetails.osSphere || '-'} Cyl: ${item.prescriptionDetails.osCyl || '0'}]`;
+      }
+    } else if (item.type === 'eyeglasses' || item.type === 'sunglasses') {
+      itemExtra += " [Frame Only]";
+    }
+
+    if (item.readingPower) itemExtra += ` [Power: ${item.readingPower}]`;
+    if (item.selectedColor && !item.disposalType) itemExtra += ` [Color: ${item.selectedColor}]`;
+
+    return `${idx + 1}. *${item.name}* x${item.qty} — ₹${(unitPrice * item.qty).toLocaleString('en-IN')}${itemExtra}`;
   }).join("\n");
 
   const lines = [

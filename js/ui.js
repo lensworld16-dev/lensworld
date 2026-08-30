@@ -1,5 +1,5 @@
 // LENS S WORLD - Clean UI Components & View Renderer
-import { STORE_INFO, CATEGORIES, GENDER_CATEGORIES, LENS_PACKAGES, COUPONS, ORDER_STATUSES } from './data.js';
+import { STORE_INFO, CATEGORIES, GENDER_CATEGORIES, LENS_PACKAGES, PRESCRIPTION_POWER_OPTIONS, COUPONS, ORDER_STATUSES } from './data.js';
 import { store } from './store.js';
 import { getWhatsAppUrl, getProductEnquiryUrl, formatOrderForWhatsApp } from './whatsapp.js';
 
@@ -77,11 +77,17 @@ export const UI = {
 
   // Render Home Page
   renderHomePage() {
-    const newArrivals = store.products.filter(p => p.isNew === true || (p.badge && p.badge.toLowerCase().includes('new')));
-    const trending = store.products.filter(p => p.isTrending === true || p.trending === true || (p.badge && p.badge.toLowerCase().includes('trend')));
-    const eyeglasses = store.products.filter(p => p.type === 'eyeglasses');
-    const sunglasses = store.products.filter(p => p.type === 'sunglasses');
-    const readers = store.products.filter(p => p.type === 'reading-glasses' || p.type === 'contact-lenses' || p.type === 'accessories');
+    const getFeaturedItems = (catType, limit = 4) => {
+      const allInCat = store.products.filter(p => p.type === catType);
+      const featured = allInCat.filter(p => p.isFeatured === true || p.featured === true || p.bestSeller === true);
+      const nonFeatured = allInCat.filter(p => !p.isFeatured && !p.featured && !p.bestSeller);
+      const combined = [...featured, ...nonFeatured];
+      return combined.slice(0, limit);
+    };
+
+    const featuredEyeglasses = getFeaturedItems('eyeglasses', 4);
+    const featuredSunglasses = getFeaturedItems('sunglasses', 4);
+    const featuredReaders = getFeaturedItems('reading-glasses', 4);
 
     return `
       <!-- Top Story Circles Carousel (Exact Categories: Eyeglasses, Sunglasses, Power Specs, Contact Lens, Readers, Lens, Accessories) -->
@@ -132,7 +138,7 @@ export const UI = {
 
             <a href="#shop?category=accessories" class="story-circle-item">
               <div class="story-circle-avatar">
-                <img src="${store.getCatImg('story_accessories', 'https://chashmah.com/wp-content/uploads/2026/08/1001073223_768x768.webp')}" alt="Accessories" />
+                <img src="${store.getCatImg('story_accessories', 'images/essentials_frame.png')}" alt="Accessories" />
               </div>
               <span class="story-circle-label">Accessories</span>
             </a>
@@ -152,40 +158,16 @@ export const UI = {
         </div>
       </section>
 
-      <!-- New Arrivals Highlight Slider (If flagged in Admin) -->
-      ${newArrivals.length > 0 ? `
-        <section class="demographic-section" style="padding-top:0.5rem;">
-          <div class="container">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.65rem;">
-              <span style="font-size:0.92rem; font-weight:800; color:#000040; text-transform:uppercase; letter-spacing:0.04em;">✨ New Arrivals</span>
-              <a href="#shop" style="font-size:0.82rem; font-weight:700; color:#000040;">View All (${newArrivals.length}) →</a>
-            </div>
-            <div class="products-grid">
-              ${newArrivals.slice(0, 4).map(p => this.renderProductCard(p)).join('')}
-            </div>
-          </div>
-        </section>
-      ` : ''}
-
-      <!-- Trending Styles Highlight Slider (If flagged in Admin) -->
-      ${trending.length > 0 ? `
-        <section class="demographic-section" style="padding-top:0;">
-          <div class="container">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.65rem;">
-              <span style="font-size:0.92rem; font-weight:800; color:#000040; text-transform:uppercase; letter-spacing:0.04em;">🔥 Trending Styles</span>
-              <a href="#shop" style="font-size:0.82rem; font-weight:700; color:#000040;">View All (${trending.length}) →</a>
-            </div>
-            <div class="products-grid">
-              ${trending.slice(0, 4).map(p => this.renderProductCard(p)).join('')}
-            </div>
-          </div>
-        </section>
-      ` : ''}
-
-      <!-- Eyeglasses 4-Demographic Grid (Real Indian Eyewear Campaign Models) -->
-      <section class="demographic-section">
+      <!-- 1. Eyeglasses Section (4 Demographic Cards + 4 Featured Products) -->
+      <section class="demographic-section" style="padding-bottom: 2rem;">
         <div class="container">
-          <h2 class="demographic-header">Eyeglasses</h2>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h2 class="demographic-header" style="margin:0;">Eyeglasses</h2>
+            <a href="#shop?category=eyeglasses" style="font-size:0.82rem; font-weight:700; color:#000040; text-decoration:none; display:flex; align-items:center; gap:0.25rem;">
+              View All (${store.products.filter(p => p.type === 'eyeglasses').length}) →
+            </a>
+          </div>
+          
           <div class="demographic-grid">
             <a href="#shop?category=eyeglasses&gender=men" class="demo-card">
               <div class="demo-thumb-box contain-img">
@@ -202,40 +184,39 @@ export const UI = {
             </a>
 
             <a href="#shop?category=eyeglasses&gender=kids" class="demo-card">
-              <div class="demo-thumb-box contain-img">
-                <img src="${store.getCatImg('eye_kids', 'https://chashmah.com/wp-content/uploads/2026/06/Glass-Grey-Classic-Eyeglasses-175804-4.webp')}" alt="Kids Eyeglasses" />
+              <div class="demo-thumb-box">
+                <img src="${store.getCatImg('eye_kids', 'images/kids_eyeglasses.png')}" alt="Kids Eyeglasses" />
               </div>
               <span class="demo-label">Kids</span>
             </a>
 
             <a href="#shop?category=eyeglasses" class="demo-card">
               <div class="demo-thumb-box contain-img">
-                <img src="${store.getCatImg('eye_essentials', 'https://chashmah.com/wp-content/uploads/2024/05/IMG20240502181046.webp')}" alt="Essentials" />
-                <span class="demo-badge" style="background:#111827;">50% off</span>
+                <img src="${store.getCatImg('eye_essentials', 'images/essentials_frame.png')}" alt="Essentials" />
               </div>
               <span class="demo-label">Essentials</span>
             </a>
           </div>
-        </div>
-      </section>
 
-      <!-- Eyeglasses Section Products -->
-      <section class="demographic-section" style="padding-top:0;">
-        <div class="container">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.65rem;">
-            <span style="font-size:0.92rem; font-weight:800; color:#000040; text-transform:uppercase; letter-spacing:0.04em;">Featured Eyeglasses</span>
-            <a href="#shop?category=eyeglasses" style="font-size:0.82rem; font-weight:700; color:#000040;">View All →</a>
-          </div>
-          <div class="products-grid">
-            ${eyeglasses.map(p => this.renderProductCard(p)).join('')}
+          <!-- 4 Featured Eyeglasses Live Products -->
+          <div style="margin-top: 1.5rem;">
+            <div class="products-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:1.25rem;">
+              ${featuredEyeglasses.map(p => this.renderProductCard(p)).join('')}
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- Sunglasses 4-Demographic Grid (Real Indian Eyewear Campaign Models) -->
-      <section class="demographic-section">
+      <!-- 2. Sunglasses Section (4 Demographic Cards + 4 Featured Products) -->
+      <section class="demographic-section" style="padding-top: 1rem; padding-bottom: 2rem; border-top: 1px solid #f1f5f9;">
         <div class="container">
-          <h2 class="demographic-header">Sunglasses</h2>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h2 class="demographic-header" style="margin:0;">Sunglasses</h2>
+            <a href="#shop?category=sunglasses" style="font-size:0.82rem; font-weight:700; color:#000040; text-decoration:none; display:flex; align-items:center; gap:0.25rem;">
+              View All (${store.products.filter(p => p.type === 'sunglasses').length}) →
+            </a>
+          </div>
+
           <div class="demographic-grid">
             <a href="#shop?category=sunglasses&gender=men" class="demo-card">
               <div class="demo-thumb-box contain-img">
@@ -252,82 +233,43 @@ export const UI = {
             </a>
 
             <a href="#shop?category=sunglasses&gender=kids" class="demo-card">
-              <div class="demo-thumb-box contain-img">
-                <img src="${store.getCatImg('sun_kids', 'https://chashmah.com/wp-content/uploads/2026/01/Hexxa-Brown-Turban-fit-Sunglasses-GG003-4.webp')}" alt="Kids Sunglasses" />
+              <div class="demo-thumb-box">
+                <img src="${store.getCatImg('sun_kids', 'images/kids_sunglasses.png')}" alt="Kids Sunglasses" />
               </div>
               <span class="demo-label">Kids</span>
             </a>
 
             <a href="#shop?category=sunglasses" class="demo-card">
               <div class="demo-thumb-box contain-img">
-                <img src="${store.getCatImg('sun_essentials', 'https://chashmah.com/wp-content/uploads/2025/09/Golden-Green-Turban-Fit-Sunglasses-101-5.webp')}" alt="Essentials Sunglasses" />
-                <span class="demo-badge" style="background:#111827;">60% off</span>
+                <img src="${store.getCatImg('sun_essentials', 'images/essentials_frame.png')}" alt="Essentials Sunglasses" />
               </div>
               <span class="demo-label">Essentials</span>
             </a>
           </div>
-        </div>
-      </section>
 
-      <!-- Sunglasses Section Products -->
-      <section class="demographic-section" style="padding-top:0;">
-        <div class="container">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.65rem;">
-            <span style="font-size:0.92rem; font-weight:800; color:#000040; text-transform:uppercase; letter-spacing:0.04em;">Featured Sunglasses</span>
-            <a href="#shop?category=sunglasses" style="font-size:0.82rem; font-weight:700; color:#000040;">View All →</a>
-          </div>
-          <div class="products-grid">
-            ${sunglasses.map(p => this.renderProductCard(p)).join('')}
+          <!-- 4 Featured Sunglasses Live Products -->
+          <div style="margin-top: 1.5rem;">
+            <div class="products-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:1.25rem;">
+              ${featuredSunglasses.map(p => this.renderProductCard(p)).join('')}
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- LENS S WORLD Specials (Real Optical Specs & Frames) -->
-      <section class="demographic-section">
+      <!-- 3. Reading Glasses Section (4 Featured Products) -->
+      <section class="featured-readers-section" style="padding: 1.5rem 0 2.5rem 0; border-top: 1px solid #f1f5f9;">
         <div class="container">
-          <h2 class="demographic-header">LENS S WORLD Specials</h2>
-          <div class="demographic-grid">
-            <a href="#lenses-guide" class="demo-card">
-              <div class="demo-thumb-box contain-img">
-                <img src="https://chashmah.com/wp-content/uploads/2025/06/Black-Switch-Clip-on-Eyeglasses-80101-new.webp" alt="Zero Power" />
-              </div>
-              <span class="demo-label">Zero Power</span>
-            </a>
-
-            <a href="#lenses-guide" class="demo-card">
-              <div class="demo-thumb-box contain-img">
-                <img src="https://chashmah.com/wp-content/uploads/2026/08/modern-Silver-rimless-eyeglasses-for-Sikh-LDX178-4.webp" alt="Progressive" />
-              </div>
-              <span class="demo-label">Progressive</span>
-            </a>
-
-            <a href="#lenses-guide" class="demo-card">
-              <div class="demo-thumb-box contain-img">
-                <img src="https://chashmah.com/wp-content/uploads/2025/09/Airlite-Silver-Turban-Fit-Eyeglasses-147-1.webp" alt="One Power" />
-              </div>
-              <span class="demo-label">One Power</span>
-            </a>
-
-            <a href="#shop?category=reading-glasses" class="demo-card">
-              <div class="demo-thumb-box contain-img">
-                <img src="https://chashmah.com/wp-content/uploads/2025/02/Black-Silver-Turban-Frame-88810-2.webp" alt="Power Readers" />
-                <span class="demo-badge" style="background:#111827;">Exclusive</span>
-              </div>
-              <span class="demo-label">Power Reader</span>
+          <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:1.25rem;">
+            <div>
+              <span style="font-size:0.75rem; font-weight:800; color:#9333ea; text-transform:uppercase; letter-spacing:0.06em; display:block; margin-bottom:0.25rem;">Instant Power Glasses (+1.00 to +3.00)</span>
+              <h2 style="font-size:1.4rem; font-weight:800; color:#000040; margin:0;">Reading Glasses Collection</h2>
+            </div>
+            <a href="#shop?category=reading-glasses" style="font-size:0.82rem; font-weight:700; color:#000040; text-decoration:none; display:flex; align-items:center; gap:0.25rem;">
+              View All Readers (30) →
             </a>
           </div>
-        </div>
-      </section>
-
-      <!-- Reading Glasses & Contact Lenses / Accessories Products -->
-      <section class="demographic-section" style="padding-top:0;">
-        <div class="container">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.65rem;">
-            <span style="font-size:0.92rem; font-weight:800; color:#000040; text-transform:uppercase; letter-spacing:0.04em;">Readers & Daily Wear</span>
-            <a href="#shop?category=reading-glasses" style="font-size:0.82rem; font-weight:700; color:#000040;">View All →</a>
-          </div>
-          <div class="products-grid">
-            ${readers.map(p => this.renderProductCard(p)).join('')}
+          <div class="products-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:1.25rem;">
+            ${featuredReaders.map(p => this.renderProductCard(p)).join('')}
           </div>
         </div>
       </section>
@@ -342,17 +284,35 @@ export const UI = {
           </div>
 
           <div class="lens-guide-grid">
-            ${LENS_PACKAGES.map(lp => `
-              <div class="lens-package-card">
-                <div class="lens-card-top">
-                  <span class="lens-package-badge">${lp.badge}</span>
-                  <div class="lens-package-price">${this.formatPrice(lp.price)}</div>
+            ${LENS_PACKAGES.map(lp => {
+              const lensProductMap = {
+                'anti-glare-arc': 'lens-s-world-anti-glare-arc-lens-pair',
+                'blue-cut-screen': 'lens-s-world-blue-cut-lens-pair',
+                'photochromic-transition': 'lens-s-world-photochromic-transition-lens-pair',
+                'progressive-multifocal': 'lens-s-world-progressive-multifocal-lens-pair'
+              };
+              const targetLensId = lensProductMap[lp.id] || 'lens-s-world-blue-cut-lens-pair';
+              return `
+                <div class="lens-package-card">
+                  <div class="lens-card-top">
+                    <span class="lens-package-badge">${lp.badge}</span>
+                    <div class="lens-package-price">${this.formatPrice(lp.price)}</div>
+                  </div>
+                  <h4 class="lens-package-title">${lp.name}</h4>
+                  <p class="lens-package-tagline">${lp.tagline}</p>
+                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.4rem; margin-top:0.75rem;">
+                    <a href="#product/${targetLensId}" 
+                       style="padding:0.5rem 0.2rem; background:#ffffff; color:#000040; border:1.5px solid #000040; border-radius:6px; font-size:0.75rem; font-weight:800; text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center; transition:all 0.2s ease;">
+                      Only Lens
+                    </a>
+                    <a href="#shop?category=eyeglasses" 
+                       style="padding:0.5rem 0.2rem; background:#000040; color:#ffffff; border:1.5px solid #000040; border-radius:6px; font-size:0.75rem; font-weight:800; text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center; transition:all 0.2s ease;">
+                      + Add Frame
+                    </a>
+                  </div>
                 </div>
-                <h4 class="lens-package-title">${lp.name}</h4>
-                <p class="lens-package-tagline">${lp.tagline}</p>
-                <a href="#shop?category=eyeglasses" class="lens-package-btn">Choose with Frame →</a>
-              </div>
-            `).join('')}
+              `;
+            }).join('')}
           </div>
         </div>
       </section>
@@ -547,18 +507,6 @@ export const UI = {
                 </svg>
               </button>
             </div>
-
-            <!-- Thumbnail Selector Strip (Only if multiple different images exist) -->
-            ${gallery.length > 1 ? `
-              <div class="pdp-thumb-strip">
-                ${gallery.map((img, i) => `
-                  <div class="pdp-thumb-item ${i === 0 ? 'active' : ''}" 
-                       onclick="document.querySelectorAll('.pdp-thumb-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); document.getElementById('detail-img-view').src='${img}';">
-                    <img src="${img}" alt="Thumbnail ${i+1}" />
-                  </div>
-                `).join('')}
-              </div>
-            ` : ''}
           </div>
 
           <!-- Right Column: Product Details & Purchase Actions (Compact & Systematic) -->
@@ -582,18 +530,84 @@ export const UI = {
                   ${product.mrp ? `<span class="pdp-mrp-price">${this.formatPrice(product.mrp)}</span>` : ''}
                   ${discount ? `<span class="pdp-discount-tag">${discount}% OFF</span>` : ''}
                 </div>
-                <div class="pdp-tax-note">Inclusive of all taxes & standard lens fitting • Free Case & Cloth</div>
+                <div class="pdp-tax-note">All Taxes & Fitting Included • Free Case & Cloth</div>
               </div>
 
-              <!-- Trust Micro-Badges Strip -->
-              <div class="pdp-micro-trust-row">
-                <span class="pdp-trust-chip">🚚 Free Express Delivery</span>
-                <span class="pdp-trust-chip">🛡️ 1 Year Warranty</span>
-                <span class="pdp-trust-chip">👓 100% Rx Precision</span>
+              <!-- Trust Micro-Badges Strip (Single Row) -->
+              <div class="pdp-micro-trust-row" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:0.3rem; margin-bottom:0.65rem;">
+                <span class="pdp-trust-chip" style="text-align:center; padding:0.25rem 0.1rem; font-size:0.67rem; white-space:nowrap;">🚚 Free Delivery</span>
+                <span class="pdp-trust-chip" style="text-align:center; padding:0.25rem 0.1rem; font-size:0.67rem; white-space:nowrap;">🛡️ 100% Genuine</span>
+                <span class="pdp-trust-chip" style="text-align:center; padding:0.25rem 0.1rem; font-size:0.67rem; white-space:nowrap;">👓 Rx Precision</span>
               </div>
 
-              <!-- Frame Dimensions & Specs (Eyewear only) -->
-              ${(product.type === 'eyeglasses' || product.type === 'sunglasses' || product.type === 'reading-glasses') ? `
+              <!-- Category-Specific Specifications Box -->
+              ${product.type === 'contact-lenses' ? `
+                <div class="pdp-compact-section">
+                  <div class="pdp-section-lbl">💧 Contact Lens Specifications</div>
+                  <div class="pdp-dim-grid">
+                    <div class="pdp-dim-item">
+                      <strong class="pdp-dim-val">8.6 mm</strong>
+                      <span class="pdp-dim-lbl">Base Curve</span>
+                    </div>
+                    <div class="pdp-dim-item">
+                      <strong class="pdp-dim-val">58%</strong>
+                      <span class="pdp-dim-lbl">Water Content</span>
+                    </div>
+                    <div class="pdp-dim-item">
+                      <strong class="pdp-dim-val">14.2 mm</strong>
+                      <span class="pdp-dim-lbl">Diameter</span>
+                    </div>
+                    <div class="pdp-dim-item">
+                      <strong class="pdp-dim-val">${product.material || 'Hydrogel'}</strong>
+                      <span class="pdp-dim-lbl">Material</span>
+                    </div>
+                  </div>
+                </div>
+              ` : product.type === 'lenses' ? `
+                <div class="pdp-compact-section">
+                  <div class="pdp-section-lbl">🔬 Optical Lens Technical Specifications</div>
+                  <div class="pdp-dim-grid">
+                    <div class="pdp-dim-item">
+                      <strong class="pdp-dim-val">1.56 / 1.61</strong>
+                      <span class="pdp-dim-lbl">Lens Index</span>
+                    </div>
+                    <div class="pdp-dim-item">
+                      <strong class="pdp-dim-val">AR Multi-Coat</strong>
+                      <span class="pdp-dim-lbl">Coating</span>
+                    </div>
+                    <div class="pdp-dim-item">
+                      <strong class="pdp-dim-val">UV420 Filter</strong>
+                      <span class="pdp-dim-lbl">UV Shield</span>
+                    </div>
+                    <div class="pdp-dim-item">
+                      <strong class="pdp-dim-val">HD Aspheric</strong>
+                      <span class="pdp-dim-lbl">Design</span>
+                    </div>
+                  </div>
+                </div>
+              ` : product.type === 'accessories' ? `
+                <div class="pdp-compact-section">
+                  <div class="pdp-section-lbl">✨ Accessory Specifications</div>
+                  <div class="pdp-dim-grid">
+                    <div class="pdp-dim-item">
+                      <strong class="pdp-dim-val">Kit</strong>
+                      <span class="pdp-dim-lbl">Type</span>
+                    </div>
+                    <div class="pdp-dim-item">
+                      <strong class="pdp-dim-val">60 ml</strong>
+                      <span class="pdp-dim-lbl">Volume</span>
+                    </div>
+                    <div class="pdp-dim-item">
+                      <strong class="pdp-dim-val">Universal</strong>
+                      <span class="pdp-dim-lbl">Fit</span>
+                    </div>
+                    <div class="pdp-dim-item">
+                      <strong class="pdp-dim-val">${product.sku || 'LSW-ACC-001'}</strong>
+                      <span class="pdp-dim-lbl">SKU</span>
+                    </div>
+                  </div>
+                </div>
+              ` : `
                 <div class="pdp-compact-section">
                   <div class="pdp-section-lbl">📐 Frame Dimensions & Fit</div>
                   <div class="pdp-dim-grid">
@@ -615,24 +629,264 @@ export const UI = {
                     </div>
                   </div>
                 </div>
+              `}
+
+
+              <!-- Select Frame Color (for Eyeglasses, Sunglasses, Readers) -->
+              ${product.colors && product.colors.length > 0 && product.type !== 'contact-lenses' && product.type !== 'lenses' ? `
+                <div class="pdp-compact-section">
+                  <div class="pdp-section-lbl" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>🎨 Select Frame Color</span>
+                    <span id="pdp-selected-color-name" style="font-size:0.75rem; font-weight:700; color:#0284c7;">${product.colors[0]}</span>
+                  </div>
+                  <div style="display:flex; flex-wrap:wrap; gap:0.45rem; margin-top:0.45rem;">
+                    ${product.colors.map((col, idx) => `
+                      <button type="button" class="pdp-color-pill ${idx === 0 ? 'selected' : ''}" 
+                              onclick="document.querySelectorAll('.pdp-color-pill').forEach(b=>b.classList.remove('selected')); this.classList.add('selected'); window.pdpSelectedColor='${col}'; document.getElementById('pdp-selected-color-name').textContent='${col}';"
+                              style="padding:0.45rem 0.75rem; border-radius:20px; font-size:0.75rem; font-weight:700; color:#000040; cursor:pointer; display:flex; align-items:center; gap:0.4rem; transition:all 0.2s ease;">
+                        <span style="width:12px; height:12px; border-radius:50%; background:${
+                          col.toLowerCase().includes('black') ? '#1e293b' :
+                          col.toLowerCase().includes('white') || col.toLowerCase().includes('clear') || col.toLowerCase().includes('transparent') ? '#ffffff' :
+                          col.toLowerCase().includes('brown') || col.toLowerCase().includes('tortoise') ? '#78350f' :
+                          col.toLowerCase().includes('red') ? '#dc2626' :
+                          col.toLowerCase().includes('blue') ? '#1d4ed8' :
+                          col.toLowerCase().includes('pink') || col.toLowerCase().includes('rose') ? '#ec4899' :
+                          col.toLowerCase().includes('gold') ? '#d97706' :
+                          col.toLowerCase().includes('grey') || col.toLowerCase().includes('gunmetal') || col.toLowerCase().includes('silver') ? '#64748b' : '#475569'
+                        }; border:1px solid #94a3b8; display:inline-block;"></span>
+                        ${col}
+                      </button>
+                    `).join('')}
+                  </div>
+                </div>
               ` : ''}
 
-              <!-- Check Pincode Delivery -->
-              <div class="pdp-compact-section">
-                <div class="pdp-section-lbl">📍 Check Delivery & COD Availability</div>
-                <div class="pdp-pincode-input-wrap">
-                  <input type="text" id="pincode-input" class="pdp-pincode-input" placeholder="Enter 6-digit Pincode" maxlength="6" />
-                  <button type="button" class="pdp-pincode-btn" 
-                          onclick="const v=document.getElementById('pincode-input').value; if(v.length===6){ document.getElementById('pincode-msg').innerHTML='<span style=\\'color:#16a34a; font-weight:700;\\'>✓ Delivery in 2-4 days • COD Available</span>'; } else { document.getElementById('pincode-msg').innerHTML='<span style=\\'color:#dc2626; font-weight:600;\\'>Enter valid 6-digit pincode</span>'; }">
-                    CHECK
-                  </button>
-                </div>
-                <div id="pincode-msg" style="font-size:0.75rem; margin-top:0.25rem;"></div>
-              </div>
+              <!-- FLOW A: CONTACT LENSES PDP -->
+              ${product.type === 'contact-lenses' ? `
+                <div class="pdp-compact-section">
+                  <div class="pdp-section-lbl">💧 Step 1: Select Disposal Type</div>
+                  <div class="pdp-vision-grid" style="grid-template-columns: 1fr 1fr; margin-bottom:0.75rem;">
+                    <div class="pdp-vision-card selected" onclick="document.querySelectorAll('.pdp-vision-card').forEach(c=>c.classList.remove('selected')); this.classList.add('selected'); window.updateContactLensTotal('${product.id}', 1.0, 'Daily');">
+                      <div class="pdp-vision-card-header">
+                        <span class="pdp-vision-name">Daily</span>
+                        <span class="pdp-vision-badge">${this.formatPrice(product.price)}</span>
+                      </div>
+                      <p class="pdp-vision-tagline">Daily-use contact lens option.</p>
+                    </div>
+                    <div class="pdp-vision-card" onclick="document.querySelectorAll('.pdp-vision-card').forEach(c=>c.classList.remove('selected')); this.classList.add('selected'); window.updateContactLensTotal('${product.id}', 1.2, 'Monthly');">
+                      <div class="pdp-vision-card-header">
+                        <span class="pdp-vision-name">Monthly</span>
+                        <span class="pdp-vision-badge">${this.formatPrice(Math.round(product.price * 1.2))}</span>
+                      </div>
+                      <p class="pdp-vision-tagline">Monthly-use contact lens option.</p>
+                    </div>
+                    <div class="pdp-vision-card" onclick="document.querySelectorAll('.pdp-vision-card').forEach(c=>c.classList.remove('selected')); this.classList.add('selected'); window.updateContactLensTotal('${product.id}', 1.5, 'Quarterly');">
+                      <div class="pdp-vision-card-header">
+                        <span class="pdp-vision-name">Quarterly</span>
+                        <span class="pdp-vision-badge">${this.formatPrice(Math.round(product.price * 1.5))}</span>
+                      </div>
+                      <p class="pdp-vision-tagline">Quarterly-use contact lens option.</p>
+                    </div>
+                    <div class="pdp-vision-card" onclick="document.querySelectorAll('.pdp-vision-card').forEach(c=>c.classList.remove('selected')); this.classList.add('selected'); window.updateContactLensTotal('${product.id}', 2.0, 'Yearly');">
+                      <div class="pdp-vision-card-header">
+                        <span class="pdp-vision-name">Yearly</span>
+                        <span class="pdp-vision-badge">${this.formatPrice(Math.round(product.price * 2.0))}</span>
+                      </div>
+                      <p class="pdp-vision-tagline">Yearly-use contact lens option.</p>
+                    </div>
+                  </div>
 
-              <!-- Lens Choice & Options -->
-              <div class="pdp-compact-section">
-                ${product.lensOptionsAvailable ? `
+                  <!-- Step 2: Contact Lens Prescription -->
+                  <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.75rem;">
+                    <div style="font-size:0.74rem; font-weight:800; color:#000040; text-transform:uppercase; margin-bottom:0.45rem;">
+                      Step 2: Add Prescription
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.4rem; margin-bottom:0.6rem;">
+                      <label class="pdp-rx-pill active" onclick="window.switchPdpRxMethod('upload')">
+                        <input type="radio" name="pdp-rx-method" value="upload" checked style="display:none;" />
+                        <span style="font-size:0.74rem; font-weight:700;">📤 Upload Slip</span>
+                      </label>
+                      <label class="pdp-rx-pill" onclick="window.switchPdpRxMethod('whatsapp')">
+                        <input type="radio" name="pdp-rx-method" value="whatsapp" style="display:none;" />
+                        <span style="font-size:0.74rem; font-weight:700;">📲 WhatsApp Rx</span>
+                      </label>
+                      <label class="pdp-rx-pill" onclick="window.switchPdpRxMethod('manual')">
+                        <input type="radio" name="pdp-rx-method" value="manual" style="display:none;" />
+                        <span style="font-size:0.74rem; font-weight:700;">✍️ Enter Power</span>
+                      </label>
+                      <label class="pdp-rx-pill" onclick="window.switchPdpRxMethod('zero')">
+                        <input type="radio" name="pdp-rx-method" value="zero" style="display:none;" />
+                        <span style="font-size:0.74rem; font-weight:700;">👓 Plano Power</span>
+                      </label>
+                    </div>
+
+                    <!-- Prescription Upload Box -->
+                    <div id="pdp-rx-upload-box" style="border:1.5px dashed #cbd5e1; border-radius:8px; padding:0.6rem; text-align:center; background:#fff; cursor:pointer;">
+                      <input type="file" id="pdp-rx-file" accept="image/*,application/pdf" style="display:none;" onchange="window.handleRxUpload(event)" />
+                      <label for="pdp-rx-file" style="cursor:pointer; display:block;">
+                        <span style="font-size:0.76rem; font-weight:700; color:#000040;" id="pdp-rx-file-lbl">📁 Attach Photo / Prescription Slip</span>
+                        <span style="font-size:0.68rem; color:#64748b; display:block; margin-top:2px;">Camera photo or doctor slip (PDF/JPG)</span>
+                      </label>
+                    </div>
+
+                    <!-- Prescription WhatsApp Box -->
+                    <div id="pdp-rx-whatsapp-box" style="display:none; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; padding:0.55rem 0.75rem; font-size:0.74rem; color:#065f46;">
+                      ✓ Place your order now. You can WhatsApp your prescription photo after checkout.
+                    </div>
+
+                    <!-- Prescription Manual Values Box -->
+                    <div id="pdp-rx-manual-box" style="display:none; background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:0.6rem; font-size:0.72rem;">
+                      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.4rem; font-weight:700; color:#64748b; margin-bottom:0.3rem;">
+                        <span>Right Eye (OD)</span><span>Left Eye (OS)</span>
+                      </div>
+                      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.4rem;">
+                        <select id="pdp-od-sph" style="padding:0.35rem; border:1px solid #cbd5e1; border-radius:6px; font-size:0.75rem;">
+                          <option value="0.00 (Plano)">0.00 (Plano / Cosmetic)</option>
+                          <option value="-0.50">-0.50</option>
+                          <option value="-1.00">-1.00</option>
+                          <option value="-1.50" selected>-1.50</option>
+                          <option value="-2.00">-2.00</option>
+                          <option value="-2.50">-2.50</option>
+                          <option value="-3.00">-3.00</option>
+                          <option value="-3.50">-3.50</option>
+                          <option value="-4.00">-4.00</option>
+                          <option value="-4.50">-4.50</option>
+                          <option value="-5.00">-5.00</option>
+                          <option value="-5.50">-5.50</option>
+                          <option value="-6.00">-6.00</option>
+                          <option value="+1.00">+1.00</option>
+                          <option value="+1.50">+1.50</option>
+                          <option value="+2.00">+2.00</option>
+                        </select>
+                        <select id="pdp-os-sph" style="padding:0.35rem; border:1px solid #cbd5e1; border-radius:6px; font-size:0.75rem;">
+                          <option value="0.00 (Plano)">0.00 (Plano / Cosmetic)</option>
+                          <option value="-0.50">-0.50</option>
+                          <option value="-1.00">-1.00</option>
+                          <option value="-1.50" selected>-1.50</option>
+                          <option value="-2.00">-2.00</option>
+                          <option value="-2.50">-2.50</option>
+                          <option value="-3.00">-3.00</option>
+                          <option value="-3.50">-3.50</option>
+                          <option value="-4.00">-4.00</option>
+                          <option value="-4.50">-4.50</option>
+                          <option value="-5.00">-5.00</option>
+                          <option value="-5.50">-5.50</option>
+                          <option value="-6.00">-6.00</option>
+                          <option value="+1.00">+1.00</option>
+                          <option value="+1.50">+1.50</option>
+                          <option value="+2.00">+2.00</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <!-- Prescription Zero Box -->
+                    <div id="pdp-rx-zero-box" style="display:none; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:0.55rem 0.75rem; font-size:0.74rem; color:#166534;">
+                      ✓ Plano (0.00 zero-power) cosmetic pair will be shipped.
+                    </div>
+                  </div>
+                </div>
+              ` : product.type === 'reading-glasses' ? `
+                <!-- FLOW C: READERS / READING GLASSES PDP -->
+                <div class="pdp-compact-section">
+                  <!-- Select Size -->
+                  <div style="margin-bottom:1.15rem;">
+                    <div class="pdp-section-lbl" style="margin-bottom:0.15rem;">Select Size</div>
+                    <div style="font-size:0.75rem; color:#64748b; margin-bottom:0.55rem;">Choose your comfortable fit</div>
+                    <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:0.45rem;">
+                      ${['Small', 'Medium', 'Large', 'Extra Wide'].map((sz, idx) => `
+                        <button type="button" class="pdp-size-btn ${idx === 1 ? 'selected' : ''}" 
+                                onclick="window.selectPdpSize(this, '${sz}')">
+                          ${sz}
+                        </button>
+                      `).join('')}
+                    </div>
+                  </div>
+
+                  <!-- Select Reading Power -->
+                  <div>
+                    <div class="pdp-section-lbl" style="margin-bottom:0.55rem;">Select Reading Power</div>
+                    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:0.45rem;">
+                      ${['+1.00', '+1.50', '+2.00', '+2.50', '+3.00', '+3.50'].map((pow, idx) => `
+                        <button type="button" class="pdp-power-btn ${idx === 0 ? 'selected' : ''}" 
+                                onclick="window.selectPdpPower(this, '${pow}')">
+                          ${pow}
+                        </button>
+                      `).join('')}
+                    </div>
+                  </div>
+                </div>
+              ` : product.type === 'lenses' ? `
+                <!-- FLOW D: REPLACEMENT / STANDALONE LENSES PDP -->
+                <div class="pdp-compact-section">
+                  <div class="pdp-section-lbl" style="margin-bottom:0.45rem;">📋 Add Prescription</div>
+                  <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.45rem; margin-bottom:0.65rem;">
+                      <label class="pdp-rx-pill active" onclick="window.switchPdpRxMethod('upload')">
+                        <input type="radio" name="pdp-rx-method" value="upload" checked style="display:none;" />
+                        <span style="font-size:0.74rem; font-weight:700;">📤 Upload Slip</span>
+                      </label>
+                      <label class="pdp-rx-pill" onclick="window.switchPdpRxMethod('whatsapp')">
+                        <input type="radio" name="pdp-rx-method" value="whatsapp" style="display:none;" />
+                        <span style="font-size:0.74rem; font-weight:700;">📲 WhatsApp Rx</span>
+                      </label>
+                      <label class="pdp-rx-pill" onclick="window.switchPdpRxMethod('manual')">
+                        <input type="radio" name="pdp-rx-method" value="manual" style="display:none;" />
+                        <span style="font-size:0.74rem; font-weight:700;">✍️ Enter Power</span>
+                      </label>
+                      <label class="pdp-rx-pill" onclick="window.switchPdpRxMethod('zero')">
+                        <input type="radio" name="pdp-rx-method" value="zero" style="display:none;" />
+                        <span style="font-size:0.74rem; font-weight:700;">👓 Zero Power</span>
+                      </label>
+                    </div>
+
+                    <!-- Prescription Upload Box -->
+                    <div id="pdp-rx-upload-box" style="border:1.5px dashed #cbd5e1; border-radius:8px; padding:0.75rem; text-align:center; background:#fff; cursor:pointer;">
+                      <input type="file" id="pdp-rx-file" accept="image/*,application/pdf" style="display:none;" onchange="window.handleRxUpload(event)" />
+                      <label for="pdp-rx-file" style="cursor:pointer; display:block;">
+                        <span style="font-size:0.78rem; font-weight:700; color:#000040;" id="pdp-rx-file-lbl">📁 Attach Photo / Prescription Slip</span>
+                        <span style="font-size:0.68rem; color:#64748b; display:block; margin-top:2px;">Camera photo or doctor slip (PDF/JPG)</span>
+                      </label>
+                    </div>
+
+                    <!-- Prescription WhatsApp Box -->
+                    <div id="pdp-rx-whatsapp-box" style="display:none; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; padding:0.65rem 0.85rem; font-size:0.76rem; color:#065f46;">
+                      ✓ Place your order now. You can WhatsApp your prescription photo after checkout to <strong>+91 86686 87897</strong>.
+                    </div>
+
+                    <!-- Prescription Manual Values Box -->
+                    <div id="pdp-rx-manual-box" style="display:none; background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:0.65rem; font-size:0.72rem;">
+                      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.4rem; font-weight:700; color:#64748b; margin-bottom:0.3rem;">
+                        <span>Eye</span><span>SPH</span><span>CYL</span>
+                      </div>
+                      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.4rem; align-items:center; margin-bottom:0.3rem;">
+                        <strong style="color:#000040;">Right (OD)</strong>
+                        <select id="pdp-od-sph" style="padding:0.25rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.72rem;">
+                          ${PRESCRIPTION_POWER_OPTIONS.spheres.map(s => `<option value="${s}" ${s === '0.00 (Plano)' ? 'selected' : ''}>${s}</option>`).join('')}
+                        </select>
+                        <select id="pdp-od-cyl" style="padding:0.25rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.72rem;">
+                          ${PRESCRIPTION_POWER_OPTIONS.cylinders.map(c => `<option value="${c}">${c}</option>`).join('')}
+                        </select>
+                      </div>
+                      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.4rem; align-items:center;">
+                        <strong style="color:#000040;">Left (OS)</strong>
+                        <select id="pdp-os-sph" style="padding:0.25rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.72rem;">
+                          ${PRESCRIPTION_POWER_OPTIONS.spheres.map(s => `<option value="${s}" ${s === '0.00 (Plano)' ? 'selected' : ''}>${s}</option>`).join('')}
+                        </select>
+                        <select id="pdp-os-cyl" style="padding:0.25rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.72rem;">
+                          ${PRESCRIPTION_POWER_OPTIONS.cylinders.map(c => `<option value="${c}">${c}</option>`).join('')}
+                        </select>
+                      </div>
+                    </div>
+
+                    <!-- Prescription Zero Box -->
+                    <div id="pdp-rx-zero-box" style="display:none; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:0.55rem 0.75rem; font-size:0.74rem; color:#166534;">
+                      ✓ Plano (0.00 zero-power) computer shield lenses will be crafted.
+                    </div>
+                  </div>
+                </div>
+              ` : (product.lensOptionsAvailable || product.type === 'eyeglasses' || product.type === 'sunglasses') ? `
+                <!-- FLOW B: EYEGLASSES & SUNGLASSES PDP -->
+                <div class="pdp-compact-section">
                   <div class="pdp-section-lbl">👓 Select Purchase Option</div>
 
                   <div class="pdp-lens-type-selector">
@@ -641,19 +895,19 @@ export const UI = {
                              onchange="document.getElementById('vision-type-section').style.display='none'; window.updatePdpTotal('${product.id}', 0, 'Frame Only');" />
                       <div class="pill-content">
                         <div class="pill-title-row">
-                          <span class="pill-name">Frame Only</span>
+                          <span class="pill-name">${product.type === 'sunglasses' ? 'Standard Sun Lenses' : 'Frame Only'}</span>
                           <span class="pill-price">${this.formatPrice(product.price)}</span>
                         </div>
-                        <span class="pill-desc">Standard zero-power demo lenses</span>
+                        <span class="pill-desc">${product.type === 'sunglasses' ? 'Ready-to-wear UV400 Polarized' : 'Standard zero-power demo lenses'}</span>
                       </div>
                     </label>
 
                     <label class="pdp-lens-type-pill">
                       <input type="radio" name="pdp-lens-choice" value="lenses" 
-                             onchange="document.getElementById('vision-type-section').style.display='block'; window.updatePdpTotal('${product.id}', 599, 'Anti-Glare ARC');" />
+                             onchange="document.getElementById('vision-type-section').style.display='block'; window.updatePdpTotal('${product.id}', 599, 'Anti-Glare ARC Lens');" />
                       <div class="pill-content">
                         <div class="pill-title-row">
-                          <span class="pill-name">Buy with Lenses</span>
+                          <span class="pill-name">Buy with Lens</span>
                           <span class="pill-price">+₹599</span>
                         </div>
                         <span class="pill-desc">Power / Blue-Cut / Bifocal ready</span>
@@ -664,18 +918,22 @@ export const UI = {
                   <!-- Interactive Vision Packages Grid & Inline Prescription -->
                   <div id="vision-type-section" style="display:none; margin-top:0.75rem; border-top:1px solid #eaedf1; padding-top:0.65rem;">
                     <div style="font-size:0.76rem; font-weight:800; color:#000040; text-transform:uppercase; margin-bottom:0.45rem;">
-                      Select Lens Coating & Technology:
+                      Select Lens Type:
                     </div>
 
                     <div class="pdp-vision-grid">
                       ${store.lensPackages.map((lp, idx) => `
-                        <div class="pdp-vision-card ${idx === 1 ? 'selected' : ''}" 
-                             onclick="document.querySelectorAll('.pdp-vision-card').forEach(c=>c.classList.remove('selected')); this.classList.add('selected'); window.updatePdpTotal('${product.id}', ${lp.price}, '${lp.name}', '${lp.id}');">
-                          <div class="pdp-vision-card-header">
-                            <span class="pdp-vision-name">${lp.name}</span>
-                            <span class="pdp-vision-badge">+${UI.formatPrice(lp.price)}</span>
+                        <div class="pdp-vision-card ${idx === 0 ? 'selected' : ''}" 
+                             onclick="document.querySelectorAll('.pdp-vision-card').forEach(c=>c.classList.remove('selected')); this.classList.add('selected'); window.updatePdpTotal('${product.id}', ${lp.price}, '${lp.name}', '${lp.id}');"
+                             style="display:flex; align-items:flex-start; gap:0.65rem; padding:0.65rem 0.75rem;">
+                          <img src="${lp.img}" alt="${lp.name}" style="width:44px; height:44px; object-fit:cover; border-radius:6px; border:1px solid #cbd5e1; flex-shrink:0; margin-top:2px; background:#fff;" />
+                          <div style="flex:1; min-width:0;">
+                            <div class="pdp-vision-card-header" style="margin-bottom:0.25rem;">
+                              <span class="pdp-vision-name" style="font-size:0.84rem; font-weight:800; color:#000040;">${lp.name}</span>
+                              <span class="pdp-vision-badge" style="font-size:0.78rem; font-weight:800; color:#000040; background:#f1f5f9; padding:2px 6px; border-radius:4px;">+${UI.formatPrice(lp.price)}</span>
+                            </div>
+                            <p class="pdp-vision-tagline" style="font-size:0.71rem; color:#64748b; line-height:1.28; margin:0;">${lp.tagline}</p>
                           </div>
-                          <p class="pdp-vision-tagline">${lp.tagline}</p>
                         </div>
                       `).join('')}
                     </div>
@@ -683,7 +941,7 @@ export const UI = {
                     <!-- Inline Prescription Method Selection -->
                     <div style="margin-top:0.85rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.75rem;">
                       <div style="font-size:0.74rem; font-weight:800; color:#000040; text-transform:uppercase; margin-bottom:0.45rem;">
-                        Prescription Method:
+                        Add Prescription:
                       </div>
 
                       <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.4rem; margin-bottom:0.6rem;">
@@ -768,12 +1026,15 @@ export const UI = {
                       </div>
                     </div>
                   </div>
-                ` : `
+                </div>
+              ` : `
+                <div class="pdp-compact-section">
                   <div class="pdp-section-lbl">🛍️ Purchase Option</div>
                   <div style="font-size:0.8rem; color:#475569;">
                     Ready to dispatch • 100% Genuine Quality
                   </div>
-                `}
+                </div>
+              `}
 
                 <!-- Final Total & Purchase Buttons -->
                 <div class="pdp-total-summary-row">
@@ -783,7 +1044,7 @@ export const UI = {
                   </div>
                   <div class="pdp-action-btn-group">
                     <button type="button" class="btn btn-navy btn-pdp-main" id="pdp-submit-btn" 
-                            onclick="window.AppEvents.addStandardProduct('${product.id}')">
+                            onclick="${product.type === 'lenses' ? `window.AppEvents.addLensOnlyProduct('${product.id}')` : (product.type === 'contact-lenses' ? `window.AppEvents.addContactLensProduct('${product.id}')` : `window.AppEvents.addStandardProduct('${product.id}')`)}">
                       Add to Cart
                     </button>
                   </div>
@@ -834,7 +1095,9 @@ export const UI = {
     footer.style.display = 'block';
 
     container.innerHTML = store.cart.map(item => {
-      const itemUnitPrice = item.price + (item.selectedLens?.price || 0);
+      const itemUnitPrice = item.disposalType 
+        ? Math.round(item.price * (item.disposalType.priceMultiplier || item.disposalType.multiplier || 1.0))
+        : item.price + (item.selectedLens?.price || 0);
       const fallbackImg = 'https://chashmah.com/wp-content/uploads/2026/08/1001073265_768x768.webp';
       const imgSrc = item.img || fallbackImg;
 
@@ -848,7 +1111,7 @@ export const UI = {
               <h4 class="cart-item-title" title="${item.name}">${item.name}</h4>
               <button type="button" class="cart-delete-btn" onclick="store.removeFromCart('${item.cartItemId}')" title="Remove item">✕</button>
             </div>
-            ${item.selectedLens ? `<div class="cart-item-lens">👓 ${item.selectedLens.name} (+${this.formatPrice(item.selectedLens.price)})</div>` : '<div class="cart-item-lens" style="color:#64748b;">Frame Only</div>'}
+            ${item.disposalType ? `<div class="cart-item-lens" style="color:#0284c7; font-weight:700;">💧 Disposal: ${item.disposalType.name}</div>` : item.selectedLens ? `<div class="cart-item-lens">👓 ${item.selectedLens.name} (+${this.formatPrice(item.selectedLens.price)})</div>` : item.readingPower ? `<div class="cart-item-lens">👓 Power: ${item.readingPower}</div>` : '<div class="cart-item-lens" style="color:#64748b;">Ready-to-wear / Frame Only</div>'}
             
             <div class="cart-item-bottom">
               <div class="qty-stepper">
@@ -1562,16 +1825,72 @@ export const UI = {
         <!-- Tab 1: Products Catalog -->
         ${activeTab === 'products' ? `
           <div class="admin-section-box">
+            <!-- Bulk Actions Floating Bar (Shows when items are selected) -->
+            <div id="admin-bulk-actions-bar" style="display:none; background:#000040; color:#ffffff; padding:0.75rem 1.25rem; border-radius:10px; margin-bottom:1rem; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; box-shadow:0 6px 20px rgba(0,0,64,0.25); border:1px solid rgba(255,255,255,0.15);">
+              <div style="display:flex; align-items:center; gap:0.75rem;">
+                <span style="font-weight:700; font-size:0.9rem; color:#f8fafc;" id="admin-selected-count-label">0 items selected</span>
+                <button type="button" class="btn btn-sm btn-ghost" onclick="window.clearProductSelection()" style="color:#94a3b8; font-size:0.75rem; padding:0.25rem 0.6rem; border:1px solid rgba(255,255,255,0.2); border-radius:6px;">Clear Selection</button>
+              </div>
+              
+              <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
+                <!-- Move to Category -->
+                <div style="display:flex; align-items:center; gap:0.35rem; background:rgba(255,255,255,0.08); padding:0.3rem 0.5rem; border-radius:8px;">
+                  <span style="font-size:0.75rem; color:#cbd5e1; white-space:nowrap; font-weight:600;">📁 Category:</span>
+                  <select id="admin-bulk-category-select" class="admin-select" style="background:#fff; color:#000040; height:32px; font-size:0.78rem; padding:0 0.5rem; min-width:130px; border-radius:6px;">
+                    <option value="">Move To...</option>
+                    <option value="eyeglasses">👓 Eyeglasses</option>
+                    <option value="sunglasses">🕶️ Sunglasses</option>
+                    <option value="reading-glasses">📖 Reading Glasses</option>
+                    <option value="power-specs">⚡ Power Specs</option>
+                    <option value="contact-lenses">👁️ Contact Lenses</option>
+                    <option value="lenses">💎 Lens Packages</option>
+                    <option value="accessories">👜 Accessories</option>
+                  </select>
+                  <button type="button" class="btn btn-sm" onclick="window.applyBulkCategory()" style="background:#2563eb; color:#fff; height:32px; padding:0 0.75rem; font-size:0.78rem; font-weight:700; border-radius:6px; border:none; cursor:pointer;">Move</button>
+                </div>
+
+                <!-- Change Gender -->
+                <div style="display:flex; align-items:center; gap:0.35rem; background:rgba(255,255,255,0.08); padding:0.3rem 0.5rem; border-radius:8px;">
+                  <span style="font-size:0.75rem; color:#cbd5e1; white-space:nowrap; font-weight:600;">👥 Gender:</span>
+                  <select id="admin-bulk-gender-select" class="admin-select" style="background:#fff; color:#000040; height:32px; font-size:0.78rem; padding:0 0.5rem; min-width:115px; border-radius:6px;">
+                    <option value="">Change To...</option>
+                    <option value="men">👨 Men</option>
+                    <option value="women">👩 Women</option>
+                    <option value="kids">👧 Kids</option>
+                    <option value="unisex">👥 Unisex (All)</option>
+                  </select>
+                  <button type="button" class="btn btn-sm" onclick="window.applyBulkGender()" style="background:#9333ea; color:#fff; height:32px; padding:0 0.75rem; font-size:0.78rem; font-weight:700; border-radius:6px; border:none; cursor:pointer;">Apply</button>
+                </div>
+
+                <!-- Set/Remove Featured on Home -->
+                <div style="display:flex; align-items:center; gap:0.35rem; background:rgba(255,255,255,0.08); padding:0.3rem 0.5rem; border-radius:8px;">
+                  <span style="font-size:0.75rem; color:#cbd5e1; white-space:nowrap; font-weight:600;">⭐ Home:</span>
+                  <button type="button" class="btn btn-sm" onclick="window.applyBulkFeatured(true)" style="background:#eab308; color:#000040; height:32px; padding:0 0.65rem; font-size:0.78rem; font-weight:800; border-radius:6px; border:none; cursor:pointer;" title="Feature selected on Home Page">⭐ Set Featured</button>
+                  <button type="button" class="btn btn-sm" onclick="window.applyBulkFeatured(false)" style="background:rgba(255,255,255,0.2); color:#fff; height:32px; padding:0 0.55rem; font-size:0.78rem; font-weight:600; border-radius:6px; border:none; cursor:pointer;" title="Remove from Featured">Remove</button>
+                </div>
+
+                <!-- Bulk Delete -->
+                <button type="button" class="btn btn-sm" onclick="window.bulkDeleteProductsAdmin()" style="background:#ef4444; color:#fff; height:32px; padding:0 0.85rem; font-size:0.78rem; font-weight:700; border-radius:6px; border:none; cursor:pointer;" title="Delete all selected items">🗑️ Delete Selected</button>
+              </div>
+            </div>
+
             <div class="admin-toolbar-row">
               <div class="admin-search-wrap">
                 <input type="text" id="admin-product-search" placeholder="🔍 Search product by name, SKU or category..." class="admin-input" onkeyup="window.filterAdminProducts()" />
               </div>
-              <div style="display:flex; gap:0.5rem; align-items:center;">
+              <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
                 <select id="admin-category-filter" class="admin-select" onchange="window.filterAdminProducts()" style="min-width:140px;">
                   <option value="all">All Categories (${store.products.length})</option>
                   ${store.categories.filter(c => c.key !== 'all').map(c => `
                     <option value="${c.key}">${c.label} (${store.products.filter(p => p.type === c.key).length})</option>
                   `).join('')}
+                </select>
+                <select id="admin-gender-filter" class="admin-select" onchange="window.filterAdminProducts()" style="min-width:120px;">
+                  <option value="all">All Genders</option>
+                  <option value="men">👨 Men (${store.products.filter(p => (p.gender === 'men' || (p.cats && p.cats.includes('men')))).length})</option>
+                  <option value="women">👩 Women (${store.products.filter(p => (p.gender === 'women' || (p.cats && p.cats.includes('women')))).length})</option>
+                  <option value="kids">👧 Kids (${store.products.filter(p => (p.gender === 'kids' || (p.cats && p.cats.includes('kids')))).length})</option>
+                  <option value="unisex">👥 Unisex (${store.products.filter(p => p.gender === 'unisex').length})</option>
                 </select>
                 <button type="button" class="btn btn-navy btn-sm" onclick="window.openProductModal()" style="height:34px; padding:0 0.85rem; white-space:nowrap;">+ Add Product</button>
               </div>
@@ -1581,9 +1900,13 @@ export const UI = {
               <table class="admin-table" id="admin-products-table">
                 <thead>
                   <tr>
+                    <th style="width:36px; text-align:center;">
+                      <input type="checkbox" id="admin-select-all-prods" onchange="window.toggleSelectAllProducts(this.checked)" style="cursor:pointer; width:17px; height:17px; accent-color:#000040;" title="Select All" />
+                    </th>
                     <th>Product & SKU</th>
                     <th>Category</th>
                     <th>Gender</th>
+                    <th style="text-align:center;">Home Featured</th>
                     <th>Price</th>
                     <th>MRP</th>
                     <th>Stock</th>
@@ -1592,8 +1915,13 @@ export const UI = {
                   </tr>
                 </thead>
                 <tbody>
-                  ${store.products.map(p => `
-                    <tr data-name="${p.name.toLowerCase()}" data-category="${p.type}" data-sku="${(p.sku||'').toLowerCase()}">
+                  ${store.products.map(p => {
+                    const isF = p.isFeatured === true || p.featured === true || p.bestSeller === true;
+                    return `
+                    <tr data-name="${p.name.toLowerCase()}" data-category="${p.type}" data-gender="${(p.gender||'unisex').toLowerCase()}" data-sku="${(p.sku||'').toLowerCase()}">
+                      <td style="text-align:center; vertical-align:middle;">
+                        <input type="checkbox" class="admin-prod-checkbox" value="${p.id}" onchange="window.onProductSelectChange()" style="cursor:pointer; width:16px; height:16px; accent-color:#000040;" />
+                      </td>
                       <td>
                         <div class="admin-prod-cell">
                           <img src="${p.img}" alt="${p.name}" class="admin-prod-thumb" onerror="this.onerror=null; this.src='https://chashmah.com/wp-content/uploads/2026/08/1001073265_768x768.webp';" />
@@ -1605,6 +1933,13 @@ export const UI = {
                       </td>
                       <td data-label="Category"><span class="admin-tag-pill">${p.type}</span></td>
                       <td data-label="Gender"><span style="font-size:0.78rem; font-weight:600; text-transform:capitalize;">${p.gender || 'Unisex'}</span></td>
+                      <td data-label="Home Featured" style="text-align:center; vertical-align:middle;">
+                        <button type="button" onclick="window.toggleFeaturedAdmin('${p.id}')" 
+                                style="background:${isF ? '#fef08a' : '#f8fafc'}; color:${isF ? '#854d0e' : '#64748b'}; border:1px solid ${isF ? '#facc15' : '#cbd5e1'}; font-size:0.72rem; font-weight:700; padding:0.25rem 0.55rem; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:0.25rem;"
+                                title="${isF ? 'Click to remove from Home Featured' : 'Click to show in Home Featured'}">
+                          ${isF ? '⭐ Featured' : '☆ Feature'}
+                        </button>
+                      </td>
                       <td data-label="Price"><strong style="color:#000040; font-size:0.84rem;">${this.formatPrice(p.price)}</strong></td>
                       <td data-label="MRP"><span style="color:#94a3b8; font-size:0.75rem; text-decoration:line-through;">${p.mrp ? this.formatPrice(p.mrp) : '-'}</span></td>
                       <td data-label="Stock">
@@ -1623,7 +1958,8 @@ export const UI = {
                         <button type="button" class="admin-action-btn delete" onclick="window.deleteProductAdmin('${p.id}')" title="Delete Product">🗑️</button>
                       </td>
                     </tr>
-                  `).join('')}
+                  `;
+                  }).join('')}
                 </tbody>
               </table>
             </div>
@@ -2133,6 +2469,36 @@ export const UI = {
                 <div id="p-img-preview-box" style="width:100%; height:120px; border:1px dashed #cbd5e1; border-radius:8px; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#f8fafc;">
                   <img id="p-preview-thumb" src="" style="max-height:100%; max-width:100%; object-fit:contain; display:none;" />
                   <span id="p-preview-text" style="color:#94a3b8; font-size:0.8rem;">Image preview will appear here</span>
+                </div>
+              <!-- Color Variants Selection -->
+              <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:0.75rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.45rem;">
+                  <label class="admin-checkbox-label" style="font-weight:700; color:#000040; margin:0;">
+                    <input type="checkbox" id="p-has-color-variants" checked onchange="document.getElementById('p-color-variants-picker').style.display = this.checked ? 'block' : 'none';" />
+                    <span>🎨 Enable Frame Color Variants</span>
+                  </label>
+                </div>
+
+                <div id="p-color-variants-picker" style="margin-top:0.5rem;">
+                  <div style="font-size:0.72rem; color:#64748b; margin-bottom:0.4rem;">Select available color variants for this frame:</div>
+                  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); gap:0.4rem;">
+                    ${[
+                      { name: 'Black', hex: '#1e293b' },
+                      { name: 'Brown', hex: '#78350f' },
+                      { name: 'Blue', hex: '#1d4ed8' },
+                      { name: 'Red', hex: '#dc2626' },
+                      { name: 'Pink', hex: '#ec4899' },
+                      { name: 'White', hex: '#f8fafc', border: '#cbd5e1' },
+                      { name: 'Gold', hex: '#d97706' },
+                      { name: 'Grey', hex: '#64748b' }
+                    ].map(c => `
+                      <label class="admin-checkbox-label" style="background:#fff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem; display:flex; align-items:center; gap:0.35rem; font-size:0.75rem; cursor:pointer;">
+                        <input type="checkbox" name="p-colors" value="${c.name}" checked />
+                        <span style="width:10px; height:10px; border-radius:50%; background:${c.hex}; border:1px solid ${c.border || '#475569'}; display:inline-block;"></span>
+                        <span>${c.name}</span>
+                      </label>
+                    `).join('')}
+                  </div>
                 </div>
               </div>
 

@@ -143,10 +143,10 @@ export default function LensGuidePage({ setCurrentRoute, onSelectCategory }) {
               </tr>
               <tr>
                 <td className="p-3.5 font-bold">Scratch Guard Hard Coating</td>
-                <td className="p-3.5 text-center text-emerald-600 font-bold">✓ 1-Year Warranty</td>
-                <td className="p-3.5 text-center text-emerald-600 font-bold bg-teal-50/30">✓ 1-Year Warranty</td>
-                <td className="p-3.5 text-center text-emerald-600 font-bold">✓ 1-Year Warranty</td>
-                <td className="p-3.5 text-center text-emerald-600 font-bold">✓ 1-Year Warranty</td>
+                <td className="p-3.5 text-center text-emerald-600 font-bold">✓ Included</td>
+                <td className="p-3.5 text-center text-emerald-600 font-bold bg-teal-50/30">✓ Included</td>
+                <td className="p-3.5 text-center text-emerald-600 font-bold">✓ Included</td>
+                <td className="p-3.5 text-center text-emerald-600 font-bold">✓ Included</td>
               </tr>
             </tbody>
           </table>

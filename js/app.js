@@ -2,11 +2,53 @@
 import { store } from './store.js';
 import { UI } from './ui.js';
 import { initRouter } from './router.js';
-import { LENS_PACKAGES, PRESCRIPTION_POWER_OPTIONS } from './data.js';
+import { LENS_PACKAGES, CONTACT_LENS_DISPOSAL_TYPES, PRESCRIPTION_POWER_OPTIONS } from './data.js';
 import { sendOrderEmail, sendContactInquiryEmail } from './emailService.js';
 
 // Global Event Bridge for Inline Handlers
-window.pdpSelectedLens = { id: 'blue-cut', name: 'Blue Cut Digital EyeShield™', price: 999 };
+window.pdpSelectedLens = { id: 'anti-glare-arc', name: 'Anti-Glare ARC Lens', price: 599 };
+window.pdpSelectedDisposal = { id: 'daily', name: 'Daily', multiplier: 1.0, tagline: 'Daily-use contact lens option.' };
+window.pdpSelectedSize = 'Medium';
+window.pdpSelectedReadingPower = '+1.00';
+
+window.selectPdpSize = function(btn, sz) {
+  document.querySelectorAll('.pdp-size-btn').forEach(b => b.classList.remove('selected'));
+  if (btn) btn.classList.add('selected');
+  window.pdpSelectedSize = sz;
+};
+
+window.selectPdpPower = function(btn, pow) {
+  document.querySelectorAll('.pdp-power-btn').forEach(b => b.classList.remove('selected'));
+  if (btn) btn.classList.add('selected');
+  window.pdpSelectedReadingPower = pow;
+};
+
+window.updateContactLensTotal = function(productId, multiplier, disposalName) {
+  const product = store.products.find(p => p.id === productId);
+  if (!product) return;
+  const finalPrice = Math.round(product.price * multiplier);
+  window.pdpSelectedDisposal = { id: disposalName.toLowerCase(), name: disposalName, multiplier, price: finalPrice };
+  const finalTotalEl = document.getElementById('pdp-final-total');
+  if (finalTotalEl) finalTotalEl.textContent = UI.formatPrice(finalPrice);
+  const submitBtn = document.getElementById('pdp-submit-btn');
+  if (submitBtn) {
+    submitBtn.textContent = `Add to Cart (${UI.formatPrice(finalPrice)})`;
+    submitBtn.onclick = () => window.AppEvents.addContactLensProduct(productId);
+  }
+};
+
+window.updateLensProductTotal = function(productId, lensPrice, lensName, lensId) {
+  window.pdpSelectedLens = { id: lensId, name: lensName, price: lensPrice };
+  const product = store.products.find(p => p.id === productId);
+  if (!product) return;
+  const finalTotalEl = document.getElementById('pdp-final-total');
+  if (finalTotalEl) finalTotalEl.textContent = UI.formatPrice(lensPrice);
+  const submitBtn = document.getElementById('pdp-submit-btn');
+  if (submitBtn) {
+    submitBtn.textContent = `Add to Cart (${UI.formatPrice(lensPrice)})`;
+    submitBtn.onclick = () => window.AppEvents.addLensOnlyProduct(productId);
+  }
+};
 
 window.updatePdpTotal = function(productId, lensPrice, lensName, lensId) {
   window.pdpSelectedLens = lensPrice > 0 ? { id: lensId || 'custom-lens', name: lensName, price: lensPrice } : null;
@@ -132,6 +174,9 @@ window.switchRxMethod = function(method) {
   });
 };
 
+window.pdpSelectedSize = 'Medium';
+window.pdpSelectedReadingPower = '+1.00';
+
 window.AppEvents = {
   toggleWishlist(productId) {
     store.toggleWishlist(productId);
@@ -141,10 +186,15 @@ window.AppEvents = {
     store.toggleWishlist(productId);
   },
 
-  addStandardProduct(productId, readingPower = null) {
+  addStandardProduct(productId) {
     const product = store.products.find(p => p.id === productId);
     if (!product) return;
-    store.addToCart(product, { readingPower });
+    const isReader = product.type === 'reading-glasses';
+    store.addToCart(product, { 
+      selectedColor: window.pdpSelectedColor || product.color || 'Midnight Black',
+      readingPower: isReader ? (window.pdpSelectedReadingPower || '+1.00') : null,
+      size: isReader ? (window.pdpSelectedSize || 'Medium') : product.size
+    });
   },
 
   addPdpProductWithSelectedLens(productId) {
@@ -154,7 +204,7 @@ window.AppEvents = {
     const lensChoiceRadio = document.querySelector('input[name="pdp-lens-choice"]:checked');
     const isWithLens = lensChoiceRadio && lensChoiceRadio.value === 'lenses';
 
-    const selectedLens = isWithLens ? (window.pdpSelectedLens || store.lensPackages[1]) : null;
+    const selectedLens = isWithLens ? (window.pdpSelectedLens || store.lensPackages[0]) : null;
     const rxMethodRadio = document.querySelector('input[name="pdp-rx-method"]:checked');
     const rxMethod = isWithLens ? (rxMethodRadio ? rxMethodRadio.value : 'upload') : null;
 
@@ -169,7 +219,61 @@ window.AppEvents = {
     }
 
     store.addToCart(product, {
+      selectedColor: window.pdpSelectedColor || product.color || 'Midnight Black',
       selectedLens,
+      prescriptionMethod: rxMethod,
+      prescriptionFile: window.rxUploadedFile,
+      prescriptionDetails: rxDetails
+    });
+  },
+
+  addLensOnlyProduct(productId) {
+    const product = store.products.find(p => p.id === productId);
+    if (!product) return;
+
+    const rxMethodRadio = document.querySelector('input[name="pdp-rx-method"]:checked');
+    const rxMethod = rxMethodRadio ? rxMethodRadio.value : 'upload';
+
+    let rxDetails = null;
+    if (rxMethod === 'manual') {
+      rxDetails = {
+        odSphere: document.getElementById('pdp-od-sph')?.value || '0.00',
+        odCyl: document.getElementById('pdp-od-cyl')?.value || '0.00',
+        osSphere: document.getElementById('pdp-os-sph')?.value || '0.00',
+        osCyl: document.getElementById('pdp-os-cyl')?.value || '0.00'
+      };
+    }
+
+    store.addToCart({
+      ...product,
+      name: product.name,
+      price: product.price
+    }, {
+      prescriptionMethod: rxMethod,
+      prescriptionFile: window.rxUploadedFile,
+      prescriptionDetails: rxDetails
+    });
+  },
+
+  addContactLensProduct(productId) {
+    const product = store.products.find(p => p.id === productId);
+    if (!product) return;
+
+    const rxMethodRadio = document.querySelector('input[name="pdp-rx-method"]:checked');
+    const rxMethod = rxMethodRadio ? rxMethodRadio.value : 'upload';
+
+    let rxDetails = null;
+    if (rxMethod === 'manual') {
+      rxDetails = {
+        odSphere: document.getElementById('pdp-od-sph')?.value || '-1.50',
+        osSphere: document.getElementById('pdp-os-sph')?.value || '-1.50'
+      };
+    }
+
+    const disposal = window.pdpSelectedDisposal || { id: 'daily', name: 'Daily', multiplier: 1.0, tagline: 'Daily-use contact lens option.' };
+
+    store.addToCart(product, {
+      disposalType: disposal,
       prescriptionMethod: rxMethod,
       prescriptionFile: window.rxUploadedFile,
       prescriptionDetails: rxDetails
@@ -191,7 +295,139 @@ window.AppEvents = {
     const container = document.getElementById('lens-customizer-body');
     if (!modal || !container) return;
 
-    let selectedPackage = LENS_PACKAGES[1] || LENS_PACKAGES[0];
+    const isContactLens = product.type === 'contact-lenses';
+
+    if (isContactLens) {
+      let selectedDisposal = CONTACT_LENS_DISPOSAL_TYPES[0];
+      window.modalSelectedDisposal = selectedDisposal;
+
+      container.innerHTML = `
+        <div style="margin-bottom:0.75rem;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <h4 style="font-size:1.05rem; font-weight:800; color:#000040;">${product.name}</h4>
+              <span style="font-size:0.78rem; color:#64748b;">Base Pack: <strong>${UI.formatPrice(product.price)}</strong></span>
+            </div>
+            <span style="background:#000040; color:white; font-size:0.7rem; font-weight:700; padding:3px 8px; border-radius:4px;">Contact Lens</span>
+          </div>
+        </div>
+
+        <!-- Step 1: Disposal Type -->
+        <div style="margin-bottom:1rem;">
+          <div style="font-size:0.8rem; font-weight:800; color:#000040; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.45rem;">
+            Step 1: Select Disposal Type
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.45rem;">
+            ${CONTACT_LENS_DISPOSAL_TYPES.map((disp) => `
+              <div class="lens-option-card ${disp.id === selectedDisposal.id ? 'selected' : ''}" 
+                   style="border:1.5px solid ${disp.id === selectedDisposal.id ? '#000040' : '#e2e8f0'}; border-radius:8px; padding:0.6rem 0.85rem; cursor:pointer; background:${disp.id === selectedDisposal.id ? '#f8fafc' : '#fff'}; transition:all 0.2s ease;"
+                   onclick="window.AppEvents.selectDisposalOption(this, '${disp.id}', ${product.price}, ${disp.priceMultiplier})">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <div style="display:flex; align-items:center; gap:0.35rem;">
+                    <input type="radio" name="modal-disposal" value="${disp.id}" ${disp.id === selectedDisposal.id ? 'checked' : ''} />
+                    <strong style="font-size:0.88rem; color:#000040;">${disp.name}</strong>
+                  </div>
+                  <span style="font-size:0.88rem; font-weight:800; color:#000040;">${UI.formatPrice(Math.round(product.price * disp.priceMultiplier))}</span>
+                </div>
+                <p style="font-size:0.72rem; color:#64748b; margin-top:0.25rem;">${disp.tagline}</p>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Step 2: Prescription Choice -->
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:0.85rem; margin-bottom:1rem;">
+          <div style="font-size:0.8rem; font-weight:800; color:#000040; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.6rem;">
+            Step 2: Add Prescription
+          </div>
+          
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.45rem; margin-bottom:0.75rem;">
+            <label class="rx-method-pill selected" data-method="upload" 
+                   style="border:1.5px solid #000040; background:#ffffff; border-radius:6px; padding:0.5rem; display:flex; align-items:center; gap:0.4rem; cursor:pointer;" 
+                   onclick="window.switchRxMethod('upload')">
+              <input type="radio" name="rx-method" value="upload" checked />
+              <span style="font-size:0.76rem; font-weight:700; color:#000040;">📤 Upload Slip</span>
+            </label>
+
+            <label class="rx-method-pill" data-method="whatsapp" 
+                   style="border:1.5px solid #e2e8f0; background:#ffffff; border-radius:6px; padding:0.5rem; display:flex; align-items:center; gap:0.4rem; cursor:pointer;" 
+                   onclick="window.switchRxMethod('whatsapp')">
+              <input type="radio" name="rx-method" value="whatsapp" />
+              <span style="font-size:0.76rem; font-weight:700; color:#000040;">📲 WhatsApp Rx</span>
+            </label>
+
+            <label class="rx-method-pill" data-method="manual" 
+                   style="border:1.5px solid #e2e8f0; background:#ffffff; border-radius:6px; padding:0.5rem; display:flex; align-items:center; gap:0.4rem; cursor:pointer;" 
+                   onclick="window.switchRxMethod('manual')">
+              <input type="radio" name="rx-method" value="manual" />
+              <span style="font-size:0.76rem; font-weight:700; color:#000040;">✍️ Enter Power</span>
+            </label>
+
+            <label class="rx-method-pill" data-method="zeropower" 
+                   style="border:1.5px solid #e2e8f0; background:#ffffff; border-radius:6px; padding:0.5rem; display:flex; align-items:center; gap:0.4rem; cursor:pointer;" 
+                   onclick="window.switchRxMethod('zeropower')">
+              <input type="radio" name="rx-method" value="zeropower" />
+              <span style="font-size:0.76rem; font-weight:700; color:#000040;">👓 Plano Power</span>
+            </label>
+          </div>
+
+          <!-- Upload Box -->
+          <div id="rx-upload-box" style="background:#ffffff; border:1px dashed #000040; border-radius:6px; padding:0.75rem; text-align:center;">
+            <input type="file" id="rx-file-input" accept="image/*,application/pdf" style="display:none;" onchange="window.handleRxUpload(event)" />
+            <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('rx-file-input').click()" 
+                    style="width:100%; font-weight:700; border-color:#000040; color:#000040;">
+              📷 Upload Doctor Prescription (Photo/PDF)
+            </button>
+            <div style="font-size:0.7rem; color:#64748b; margin-top:0.35rem;">Supports JPG, PNG, PDF</div>
+            <div id="rx-upload-preview" style="display:none; align-items:center; gap:0.6rem; background:#f0fdf4; border:1px solid #86efac; border-radius:6px; padding:0.45rem 0.65rem; margin-top:0.6rem; text-align:left;">
+              <img id="rx-upload-thumb" src="" alt="Rx Preview" style="width:40px; height:40px; object-fit:cover; border-radius:4px; display:none;" />
+              <div style="flex:1; overflow:hidden;">
+                <div style="font-size:0.74rem; font-weight:700; color:#166534;">✅ Prescription Attached</div>
+                <div id="rx-upload-filename" style="font-size:0.68rem; color:#15803d; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- WhatsApp Box -->
+          <div id="rx-whatsapp-box" style="display:none; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.65rem; font-size:0.76rem; color:#334155;">
+            ✓ Place your order now. You can WhatsApp your prescription photo after checkout to <strong>+91 86686 87897</strong>.
+          </div>
+
+          <!-- Manual Contact Lens Box -->
+          <div id="manual-power-box" style="display:none; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.65rem;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+              <div style="background:#f1f5f9; padding:0.45rem; border-radius:6px;">
+                <strong style="font-size:0.72rem; color:#000040; display:block; margin-bottom:0.25rem;">Right Eye (OD)</strong>
+                <select id="rx-r-sph" style="width:100%; font-size:0.7rem; padding:0.3rem; border-radius:4px; border:1px solid #cbd5e1;">
+                  ${PRESCRIPTION_POWER_OPTIONS.contactLensSpheres.map(s => `<option value="${s}" ${s === '-1.50' ? 'selected' : ''}>${s}</option>`).join('')}
+                </select>
+              </div>
+              <div style="background:#f1f5f9; padding:0.45rem; border-radius:6px;">
+                <strong style="font-size:0.72rem; color:#000040; display:block; margin-bottom:0.25rem;">Left Eye (OS)</strong>
+                <select id="rx-l-sph" style="width:100%; font-size:0.7rem; padding:0.3rem; border-radius:4px; border:1px solid #cbd5e1;">
+                  ${PRESCRIPTION_POWER_OPTIONS.contactLensSpheres.map(s => `<option value="${s}" ${s === '-1.50' ? 'selected' : ''}>${s}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Zero Box -->
+          <div id="rx-zeropower-box" style="display:none; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.65rem; font-size:0.76rem; color:#334155;">
+            ✓ Plano (0.00 zero-power) cosmetic soft lenses will be supplied.
+          </div>
+        </div>
+
+        <button type="button" id="modal-add-cart-btn" class="btn btn-navy" style="width:100%; padding:0.75rem; font-size:0.92rem; font-weight:700; border-radius:var(--radius-pill);" 
+                onclick="window.AppEvents.confirmLensSelection('${product.id}')">
+          Add to Cart — ${UI.formatPrice(product.price)}
+        </button>
+      `;
+
+      modal.classList.add('open');
+      return;
+    }
+
+    let selectedPackage = LENS_PACKAGES[0];
 
     container.innerHTML = `
       <div style="margin-bottom:0.75rem;">
@@ -207,21 +443,24 @@ window.AppEvents = {
       <!-- Step 1: Lens Packages -->
       <div style="margin-bottom:1rem;">
         <div style="font-size:0.8rem; font-weight:800; color:#000040; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.45rem;">
-          Step 1: Select Lens Package
+          Step 1: Select Lens Type
         </div>
         <div style="display:flex; flex-direction:column; gap:0.45rem;">
           ${LENS_PACKAGES.map((lens) => `
             <div class="lens-option-card ${lens.id === selectedPackage.id ? 'selected' : ''}" 
-                 style="border:1.5px solid ${lens.id === selectedPackage.id ? '#000040' : '#e2e8f0'}; border-radius:8px; padding:0.6rem 0.85rem; display:flex; justify-content:space-between; align-items:center; cursor:pointer; background:${lens.id === selectedPackage.id ? '#f8fafc' : '#fff'}; transition:all 0.2s ease;"
+                 style="border:1.5px solid ${lens.id === selectedPackage.id ? '#000040' : '#e2e8f0'}; border-radius:8px; padding:0.6rem 0.85rem; display:flex; align-items:center; gap:0.65rem; cursor:pointer; background:${lens.id === selectedPackage.id ? '#f8fafc' : '#fff'}; transition:all 0.2s ease;"
                  onclick="window.AppEvents.selectLensOption(this, '${lens.id}', ${product.price}, ${lens.price})">
-              <div>
-                <div style="display:flex; align-items:center; gap:0.45rem;">
-                  <input type="radio" name="modal-lens" value="${lens.id}" ${lens.id === selectedPackage.id ? 'checked' : ''} />
-                  <strong style="font-size:0.88rem; color:#000040;">${lens.name}</strong>
+              <img src="${lens.img}" alt="${lens.name}" style="width:48px; height:48px; object-fit:cover; border-radius:6px; border:1px solid #cbd5e1; flex-shrink:0;" />
+              <div style="flex:1;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <div style="display:flex; align-items:center; gap:0.35rem;">
+                    <input type="radio" name="modal-lens" value="${lens.id}" ${lens.id === selectedPackage.id ? 'checked' : ''} />
+                    <strong style="font-size:0.88rem; color:#000040;">${lens.name}</strong>
+                  </div>
+                  <span style="font-size:0.92rem; font-weight:800; color:#000040; white-space:nowrap;">+${UI.formatPrice(lens.price)}</span>
                 </div>
-                <p style="font-size:0.74rem; color:#64748b; margin-top:0.15rem; margin-left:1.35rem;">${lens.tagline}</p>
+                <p style="font-size:0.72rem; color:#64748b; margin-top:0.15rem; margin-left:1.35rem;">${lens.tagline}</p>
               </div>
-              <span style="font-size:0.92rem; font-weight:800; color:#000040; white-space:nowrap;">+${UI.formatPrice(lens.price)}</span>
             </div>
           `).join('')}
         </div>
@@ -230,12 +469,10 @@ window.AppEvents = {
       <!-- Step 2: Prescription Choice (Upload / WhatsApp / Manual / Zero Power) -->
       <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:0.85rem; margin-bottom:1rem;">
         <div style="font-size:0.8rem; font-weight:800; color:#000040; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.6rem;">
-          Step 2: Choose Prescription Method
+          Step 2: Add Prescription
         </div>
         
-        <!-- 4 Clear Selectable Prescription Options -->
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.45rem; margin-bottom:0.75rem;">
-          <!-- 1. Upload Option -->
           <label class="rx-method-pill selected" data-method="upload" 
                  style="border:1.5px solid #000040; background:#ffffff; border-radius:6px; padding:0.5rem; display:flex; align-items:center; gap:0.4rem; cursor:pointer;" 
                  onclick="window.switchRxMethod('upload')">
@@ -243,15 +480,13 @@ window.AppEvents = {
             <span style="font-size:0.76rem; font-weight:700; color:#000040;">📤 Upload Slip</span>
           </label>
 
-          <!-- 2. WhatsApp Option -->
           <label class="rx-method-pill" data-method="whatsapp" 
                  style="border:1.5px solid #e2e8f0; background:#ffffff; border-radius:6px; padding:0.5rem; display:flex; align-items:center; gap:0.4rem; cursor:pointer;" 
                  onclick="window.switchRxMethod('whatsapp')">
             <input type="radio" name="rx-method" value="whatsapp" />
-            <span style="font-size:0.76rem; font-weight:700; color:#000040;">📲 WhatsApp</span>
+            <span style="font-size:0.76rem; font-weight:700; color:#000040;">📲 WhatsApp Rx</span>
           </label>
 
-          <!-- 3. Manual Eye Power -->
           <label class="rx-method-pill" data-method="manual" 
                  style="border:1.5px solid #e2e8f0; background:#ffffff; border-radius:6px; padding:0.5rem; display:flex; align-items:center; gap:0.4rem; cursor:pointer;" 
                  onclick="window.switchRxMethod('manual')">
@@ -259,7 +494,6 @@ window.AppEvents = {
             <span style="font-size:0.76rem; font-weight:700; color:#000040;">✍️ Enter Power</span>
           </label>
 
-          <!-- 4. Zero Power -->
           <label class="rx-method-pill" data-method="zeropower" 
                  style="border:1.5px solid #e2e8f0; background:#ffffff; border-radius:6px; padding:0.5rem; display:flex; align-items:center; gap:0.4rem; cursor:pointer;" 
                  onclick="window.switchRxMethod('zeropower')">
@@ -268,16 +502,15 @@ window.AppEvents = {
           </label>
         </div>
 
-        <!-- Option 1 Details: Upload Slip Box -->
+        <!-- Upload Slip Box -->
         <div id="rx-upload-box" style="background:#ffffff; border:1px dashed #000040; border-radius:6px; padding:0.75rem; text-align:center;">
           <input type="file" id="rx-file-input" accept="image/*,application/pdf" style="display:none;" onchange="window.handleRxUpload(event)" />
           <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('rx-file-input').click()" 
                   style="width:100%; font-weight:700; border-color:#000040; color:#000040;">
-            📷 Take Photo / Choose File (Gallery/PDF)
+            📷 Attach Photo / Prescription Slip (PDF/JPG)
           </button>
           <div style="font-size:0.7rem; color:#64748b; margin-top:0.35rem;">Supports JPG, PNG, PDF (Up to 10MB)</div>
 
-          <!-- Uploaded Preview -->
           <div id="rx-upload-preview" style="display:none; align-items:center; gap:0.6rem; background:#f0fdf4; border:1px solid #86efac; border-radius:6px; padding:0.45rem 0.65rem; margin-top:0.6rem; text-align:left;">
             <img id="rx-upload-thumb" src="" alt="Rx Preview" style="width:40px; height:40px; object-fit:cover; border-radius:4px; display:none;" />
             <div style="flex:1; overflow:hidden;">
@@ -288,16 +521,15 @@ window.AppEvents = {
           </div>
         </div>
 
-        <!-- Option 2 Details: WhatsApp Box -->
+        <!-- WhatsApp Box -->
         <div id="rx-whatsapp-box" style="display:none; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.65rem; font-size:0.76rem; color:#334155;">
           <div style="font-weight:700; color:#000040; margin-bottom:0.2rem;">📲 Easiest Option</div>
           Place order now. You can WhatsApp your doctor's slip photo directly to <strong>+91 86686 87897</strong> with your Order ID.
         </div>
 
-        <!-- Option 3 Details: Manual Eye Power Box -->
+        <!-- Manual Eye Power Box -->
         <div id="manual-power-box" style="display:none; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.65rem;">
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
-            <!-- Right Eye -->
             <div style="background:#f1f5f9; padding:0.45rem; border-radius:6px;">
               <strong style="font-size:0.72rem; color:#000040; display:block; margin-bottom:0.25rem;">Right Eye (OD / दायां)</strong>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.25rem;">
@@ -316,7 +548,6 @@ window.AppEvents = {
               </div>
             </div>
 
-            <!-- Left Eye -->
             <div style="background:#f1f5f9; padding:0.45rem; border-radius:6px;">
               <strong style="font-size:0.72rem; color:#000040; display:block; margin-bottom:0.25rem;">Left Eye (OS / बायां)</strong>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.25rem;">
@@ -337,7 +568,7 @@ window.AppEvents = {
           </div>
         </div>
 
-        <!-- Option 4 Details: Zero Power Box -->
+        <!-- Zero Power Box -->
         <div id="rx-zeropower-box" style="display:none; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.65rem; font-size:0.76rem; color:#334155;">
           <div style="font-weight:700; color:#000040; margin-bottom:0.2rem;">👓 Zero Power Protection</div>
           No prescription needed. Your lenses will include Blue Cut and Anti-Glare coating for computer/screen protection.
@@ -352,6 +583,26 @@ window.AppEvents = {
     `;
 
     modal.classList.add('open');
+  },
+
+  selectDisposalOption(cardEl, disposalId, basePrice, multiplier) {
+    document.querySelectorAll('.lens-option-card').forEach(c => {
+      c.style.borderColor = '#e2e8f0';
+      c.style.background = '#ffffff';
+    });
+    cardEl.style.borderColor = '#000040';
+    cardEl.style.background = '#f8fafc';
+
+    const radio = cardEl.querySelector('input[type="radio"]');
+    if (radio) radio.checked = true;
+
+    const disp = CONTACT_LENS_DISPOSAL_TYPES.find(d => d.id === disposalId);
+    window.modalSelectedDisposal = disp || CONTACT_LENS_DISPOSAL_TYPES[0];
+
+    const btn = document.getElementById('modal-add-cart-btn');
+    if (btn) {
+      btn.textContent = `Add to Cart — ${UI.formatPrice(Math.round(basePrice * multiplier))}`;
+    }
   },
 
   selectLensOption(cardEl, lensId, framePrice, lensPrice) {
@@ -375,10 +626,7 @@ window.AppEvents = {
     const product = store.products.find(p => p.id === productId);
     if (!product) return;
 
-    const selectedRadio = document.querySelector('input[name="modal-lens"]:checked');
-    const lensId = selectedRadio ? selectedRadio.value : LENS_PACKAGES[1].id;
-    const selectedLens = LENS_PACKAGES.find(l => l.id === lensId);
-
+    const isContactLens = product.type === 'contact-lenses';
     const rxMethod = document.querySelector('input[name="rx-method"]:checked')?.value || 'upload';
 
     let prescriptionData = null;
@@ -389,22 +637,39 @@ window.AppEvents = {
     } else if (rxMethod === 'manual') {
       prescriptionData = {
         right: {
-          sph: document.getElementById('rx-r-sph')?.value || '0.00',
+          sph: document.getElementById('rx-r-sph')?.value || (isContactLens ? '-1.50' : '0.00'),
           cyl: document.getElementById('rx-r-cyl')?.value || '0.00'
         },
         left: {
-          sph: document.getElementById('rx-l-sph')?.value || '0.00',
+          sph: document.getElementById('rx-l-sph')?.value || (isContactLens ? '-1.50' : '0.00'),
           cyl: document.getElementById('rx-l-cyl')?.value || '0.00'
         }
       };
     }
 
-    store.addToCart(product, {
-      selectedLens,
-      prescriptionMethod: rxMethod,
-      prescriptionData,
-      prescriptionFile
-    });
+    if (isContactLens) {
+      const selectedRadio = document.querySelector('input[name="modal-disposal"]:checked');
+      const dispId = selectedRadio ? selectedRadio.value : 'daily';
+      const disposal = CONTACT_LENS_DISPOSAL_TYPES.find(d => d.id === dispId) || CONTACT_LENS_DISPOSAL_TYPES[0];
+
+      store.addToCart(product, {
+        disposalType: disposal,
+        prescriptionMethod: rxMethod,
+        prescriptionData,
+        prescriptionFile
+      });
+    } else {
+      const selectedRadio = document.querySelector('input[name="modal-lens"]:checked');
+      const lensId = selectedRadio ? selectedRadio.value : LENS_PACKAGES[0].id;
+      const selectedLens = LENS_PACKAGES.find(l => l.id === lensId) || LENS_PACKAGES[0];
+
+      store.addToCart(product, {
+        selectedLens,
+        prescriptionMethod: rxMethod,
+        prescriptionData,
+        prescriptionFile
+      });
+    }
 
     document.getElementById('lens-customizer-modal')?.classList.remove('open');
     UI.openCartDrawer();
@@ -532,21 +797,133 @@ document.addEventListener('DOMContentLoaded', () => {
 window.filterAdminProducts = function() {
   const query = (document.getElementById('admin-product-search')?.value || '').toLowerCase();
   const cat = document.getElementById('admin-category-filter')?.value || 'all';
+  const gen = document.getElementById('admin-gender-filter')?.value || 'all';
 
   document.querySelectorAll('#admin-products-table tbody tr').forEach(row => {
     const name = row.getAttribute('data-name') || '';
     const category = row.getAttribute('data-category') || '';
+    const gender = row.getAttribute('data-gender') || '';
     const sku = row.getAttribute('data-sku') || '';
 
     const matchesQuery = name.includes(query) || sku.includes(query);
     const matchesCat = (cat === 'all' || category === cat);
+    const matchesGen = (gen === 'all' || gender === gen || (gender === 'unisex' && gen !== 'kids'));
 
-    if (matchesQuery && matchesCat) {
+    if (matchesQuery && matchesCat && matchesGen) {
       row.style.display = '';
     } else {
       row.style.display = 'none';
     }
   });
+};
+
+window.toggleSelectAllProducts = function(checked) {
+  const visibleRows = document.querySelectorAll('#admin-products-table tbody tr');
+  visibleRows.forEach(row => {
+    if (row.style.display !== 'none') {
+      const cb = row.querySelector('.admin-prod-checkbox');
+      if (cb) cb.checked = checked;
+    }
+  });
+  window.onProductSelectChange();
+};
+
+window.onProductSelectChange = function() {
+  const checkboxes = document.querySelectorAll('.admin-prod-checkbox:checked');
+  const count = checkboxes.length;
+  const bulkBar = document.getElementById('admin-bulk-actions-bar');
+  const countLabel = document.getElementById('admin-selected-count-label');
+  const selectAllCb = document.getElementById('admin-select-all-prods');
+
+  if (countLabel) countLabel.textContent = `${count} item${count === 1 ? '' : 's'} selected`;
+
+  if (bulkBar) {
+    if (count > 0) {
+      bulkBar.style.display = 'flex';
+    } else {
+      bulkBar.style.display = 'none';
+    }
+  }
+
+  const allVisible = document.querySelectorAll('#admin-products-table tbody tr:not([style*="display: none"]) .admin-prod-checkbox');
+  if (selectAllCb) {
+    selectAllCb.checked = (allVisible.length > 0 && checkboxes.length === allVisible.length);
+  }
+};
+
+window.getSelectedProductIds = function() {
+  const checkboxes = document.querySelectorAll('.admin-prod-checkbox:checked');
+  return Array.from(checkboxes).map(cb => cb.value);
+};
+
+window.clearProductSelection = function() {
+  const checkboxes = document.querySelectorAll('.admin-prod-checkbox');
+  checkboxes.forEach(cb => cb.checked = false);
+  const selectAllCb = document.getElementById('admin-select-all-prods');
+  if (selectAllCb) selectAllCb.checked = false;
+  window.onProductSelectChange();
+};
+
+window.applyBulkCategory = function() {
+  const selectedIds = window.getSelectedProductIds();
+  if (selectedIds.length === 0) {
+    store.showToast("Please select at least one product.", "warning");
+    return;
+  }
+  const newCat = document.getElementById('admin-bulk-category-select')?.value;
+  if (!newCat) {
+    store.showToast("Please select a target category.", "warning");
+    return;
+  }
+  store.bulkMoveCategory(selectedIds, newCat);
+  const mainApp = document.getElementById('app-main');
+  if (mainApp) mainApp.innerHTML = UI.renderAdminDashboard('products');
+};
+
+window.applyBulkGender = function() {
+  const selectedIds = window.getSelectedProductIds();
+  if (selectedIds.length === 0) {
+    store.showToast("Please select at least one product.", "warning");
+    return;
+  }
+  const newGen = document.getElementById('admin-bulk-gender-select')?.value;
+  if (!newGen) {
+    store.showToast("Please select a target gender.", "warning");
+    return;
+  }
+  store.bulkChangeGender(selectedIds, newGen);
+  const mainApp = document.getElementById('app-main');
+  if (mainApp) mainApp.innerHTML = UI.renderAdminDashboard('products');
+};
+
+window.applyBulkFeatured = function(isFeatured = true) {
+  const selectedIds = window.getSelectedProductIds();
+  if (selectedIds.length === 0) {
+    store.showToast("Please select at least one product.", "warning");
+    return;
+  }
+  store.bulkSetFeatured(selectedIds, isFeatured);
+  const mainApp = document.getElementById('app-main');
+  if (mainApp) mainApp.innerHTML = UI.renderAdminDashboard('products');
+};
+
+window.toggleFeaturedAdmin = function(productId) {
+  store.toggleProductFeatured(productId);
+  const mainApp = document.getElementById('app-main');
+  if (mainApp) mainApp.innerHTML = UI.renderAdminDashboard('products');
+};
+
+window.bulkDeleteProductsAdmin = function() {
+  const selectedIds = window.getSelectedProductIds();
+  if (selectedIds.length === 0) {
+    store.showToast("Please select at least one product.", "warning");
+    return;
+  }
+  if (confirm(`Are you sure you want to permanently delete ${selectedIds.length} selected products?`)) {
+    store.bulkDeleteProducts(selectedIds);
+    const mainApp = document.getElementById('app-main');
+    if (mainApp) mainApp.innerHTML = UI.renderAdminDashboard('products');
+  }
 };
 
 window.openProductModal = function(productId = null) {
@@ -605,6 +982,20 @@ window.openProductModal = function(productId = null) {
     weightEl.value = product.weight || '17g';
     descEl.value = product.description || '';
 
+    // Color Variants in Edit Mode
+    const hasVariantsCheckbox = document.getElementById('p-has-color-variants');
+    const colorPickerContainer = document.getElementById('p-color-variants-picker');
+    const colorCheckboxes = document.querySelectorAll('input[name="p-colors"]');
+    const prodColors = product.colors || (product.color ? [product.color] : []);
+
+    if (hasVariantsCheckbox) {
+      hasVariantsCheckbox.checked = prodColors.length > 0;
+      if (colorPickerContainer) colorPickerContainer.style.display = prodColors.length > 0 ? 'block' : 'none';
+    }
+    colorCheckboxes.forEach(cb => {
+      cb.checked = prodColors.some(c => c.toLowerCase() === cb.value.toLowerCase());
+    });
+
     if (product.img) {
       previewImg.src = product.img;
       previewImg.style.display = 'block';
@@ -632,6 +1023,19 @@ window.openProductModal = function(productId = null) {
     shapeEl.value = 'Rectangle';
     weightEl.value = '17g';
     descEl.value = 'High-definition optical frame with certified lenses.';
+
+    // Default Color Variants in Add Mode
+    const hasVariantsCheckbox = document.getElementById('p-has-color-variants');
+    const colorPickerContainer = document.getElementById('p-color-variants-picker');
+    const colorCheckboxes = document.querySelectorAll('input[name="p-colors"]');
+    if (hasVariantsCheckbox) {
+      hasVariantsCheckbox.checked = true;
+      if (colorPickerContainer) colorPickerContainer.style.display = 'block';
+    }
+    colorCheckboxes.forEach(cb => {
+      cb.checked = ['Black', 'Brown', 'Blue', 'Red', 'Pink', 'White'].includes(cb.value);
+    });
+
     previewImg.style.display = 'none';
     previewText.style.display = 'block';
   }
@@ -683,11 +1087,21 @@ window.saveProductForm = function(event) {
   const weight = document.getElementById('p-weight').value.trim() || '17g';
   const description = document.getElementById('p-desc').value.trim();
 
+  // Handle Color Variants
+  const hasVariants = document.getElementById('p-has-color-variants')?.checked !== false;
+  let colors = [];
+  if (hasVariants) {
+    const checkedBoxes = document.querySelectorAll('input[name="p-colors"]:checked');
+    colors = Array.from(checkedBoxes).map(cb => cb.value);
+  }
+  const color = colors.length > 0 ? colors[0] : 'Black';
+
   const productData = {
     name,
     sku,
     type,
     gender,
+    cats: gender === 'unisex' ? ['men', 'women', 'unisex'] : [gender],
     badge: badge || (isNew ? 'New' : (isTrending ? 'Trending' : '')),
     featured,
     isNew,
@@ -699,6 +1113,8 @@ window.saveProductForm = function(event) {
     gallery: [img],
     lensOptionsAvailable,
     inStock,
+    color,
+    colors: colors.length > 0 ? colors : [color],
     size,
     shape,
     weight,

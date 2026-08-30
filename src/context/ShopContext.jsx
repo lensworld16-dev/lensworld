@@ -140,11 +140,18 @@ export const ORDER_STATUSES = [
 ];
 
 export function ShopProvider({ children }) {
-  // Products state (stored in localStorage if modified by admin)
+  // Products state (synchronized with PRODUCTS_DATA and admin edits)
   const [products, setProducts] = useState(() => {
     try {
       const saved = localStorage.getItem("lsw_products");
-      return saved ? JSON.parse(saved) : PRODUCTS_DATA;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return PRODUCTS_DATA.map(baseProd => {
+          const match = parsed.find(p => p.id === baseProd.id);
+          return match ? { ...baseProd, price: match.price ?? baseProd.price, stock: match.stock ?? baseProd.stock } : baseProd;
+        });
+      }
+      return PRODUCTS_DATA;
     } catch {
       return PRODUCTS_DATA;
     }
@@ -306,8 +313,15 @@ export function ShopProvider({ children }) {
   }, []);
 
   // Calculate totals
+  const getItemUnitPrice = (item) => {
+    if (item.disposalType) {
+      return Math.round(item.price * (item.disposalType.priceMultiplier || 1.0));
+    }
+    return item.price + (item.selectedLens?.price || 0);
+  };
+
   const subtotal = cart.reduce((sum, item) => {
-    const itemUnitPrice = item.price + (item.selectedLens?.price || 0);
+    const itemUnitPrice = getItemUnitPrice(item);
     return sum + (itemUnitPrice * item.qty);
   }, 0);
 
@@ -336,6 +350,7 @@ export function ShopProvider({ children }) {
     const {
       selectedColor = product.color || product.colors?.[0] || "Standard",
       selectedLens = null,
+      disposalType = null,
       readingPower = null,
       prescriptionMethod = null,
       prescriptionDetails = null,
@@ -343,7 +358,7 @@ export function ShopProvider({ children }) {
       qty = 1
     } = options;
 
-    const cartItemId = `${product.id}-${selectedColor}-${selectedLens?.id || 'frame'}-${readingPower || 'std'}`;
+    const cartItemId = `${product.id}-${selectedColor}-${selectedLens?.id || 'frame'}-${disposalType?.id || 'std'}-${readingPower || 'std'}`;
 
     setCart(prevCart => {
       const existingIdx = prevCart.findIndex(item => item.cartItemId === cartItemId);
@@ -359,6 +374,7 @@ export function ShopProvider({ children }) {
             cartItemId,
             selectedColor,
             selectedLens,
+            disposalType,
             readingPower,
             prescriptionMethod,
             prescriptionDetails,

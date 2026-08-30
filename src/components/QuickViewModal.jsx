@@ -23,7 +23,7 @@ export default function QuickViewModal({ onOpenLensModal, onNavigateToProduct })
   const [selectedPower, setSelectedPower] = useState(product.powersAvailable?.[0] || null);
 
   const handleAdd = () => {
-    if (product.lensOptionsAvailable) {
+    if (product.lensOptionsAvailable || product.type === 'contact-lenses') {
       setQuickViewProduct(null);
       onOpenLensModal(product);
     } else {
@@ -139,7 +139,7 @@ export default function QuickViewModal({ onOpenLensModal, onNavigateToProduct })
                   <Truck className="w-3.5 h-3.5 text-teal-700" /> Free Express Delivery
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-teal-700" /> 1-Year Frame Warranty
+                  <ShieldCheck className="w-3.5 h-3.5 text-teal-700" /> 100% Genuine Quality
                 </div>
               </div>
             </div>
@@ -160,7 +160,9 @@ export default function QuickViewModal({ onOpenLensModal, onNavigateToProduct })
                 onClick={handleAdd}
                 className="flex-1 py-3 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl shadow-lg shadow-teal-700/20 transition flex items-center justify-center gap-2 active:scale-95"
               >
-                {product.lensOptionsAvailable ? (
+                {product.type === 'contact-lenses' ? (
+                  <>Select Pack & Power <ArrowRight className="w-4 h-4" /></>
+                ) : product.lensOptionsAvailable ? (
                   <>Customize Lens & Buy <ArrowRight className="w-4 h-4" /></>
                 ) : (
                   <><ShoppingBag className="w-4 h-4" /> Add to Cart</>

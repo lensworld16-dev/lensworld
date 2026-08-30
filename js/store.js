@@ -7,15 +7,34 @@ class Store {
 
     // 1. Products State
     try {
-      const initialMap = new Map(INITIAL_PRODUCTS.map(p => [p.id, p]));
+      const oldMockIds = new Set([
+        "lens-s-world-ravenna-rectangle",
+        "lens-s-world-orbit-round-metal",
+        "lens-s-world-solaro-aviator",
+        "lens-s-world-bella-cat-eye",
+        "lens-s-world-velocity-sports",
+        "lens-s-world-azure-wayfarer",
+        "lens-s-world-clarity-reader",
+        "lens-s-world-focus-reading-pro",
+        "lens-s-world-aquasoft-monthly",
+        "lens-s-world-dailyclear-contacts",
+        "lens-s-world-lens-cleaner-kit"
+      ]);
+      const deletedIds = new Set(JSON.parse(localStorage.getItem("lsw_deleted_products") || "[]"));
+      const initialMap = new Map(INITIAL_PRODUCTS.filter(p => !deletedIds.has(p.id)).map(p => [p.id, p]));
       const saved = localStorage.getItem("lsw_products");
       if (saved) {
         const parsed = JSON.parse(saved);
         parsed.forEach(p => {
+          if (oldMockIds.has(p.id) || deletedIds.has(p.id)) return; // purge old or deleted products
           if (initialMap.has(p.id)) {
-            // Keep admin edits like price, stock, and updated images
             const orig = initialMap.get(p.id);
-            initialMap.set(p.id, { ...orig, ...p, img: p.img || orig.img, gallery: p.gallery || orig.gallery });
+            initialMap.set(p.id, { 
+              ...orig,         // start with data.js defaults
+              ...p,            // then override with admin-saved values (type, gender, cats, price, mrp, stock, etc.)
+              img: p.img || orig.img,
+              gallery: [p.img || orig.img]
+            });
           } else {
             initialMap.set(p.id, p);
           }
@@ -71,8 +90,8 @@ class Store {
 
     // 6. Lens Packages State
     try {
-      const saved = localStorage.getItem("lsw_lens_packages");
-      this.lensPackages = saved ? JSON.parse(saved) : LENS_PACKAGES;
+      this.lensPackages = LENS_PACKAGES;
+      localStorage.setItem("lsw_lens_packages", JSON.stringify(LENS_PACKAGES));
     } catch {
       this.lensPackages = LENS_PACKAGES;
     }
@@ -94,12 +113,9 @@ class Store {
     }
 
     // 9. Category & Demographic Banner Images State
-    try {
-      const saved = localStorage.getItem("lsw_category_images");
-      this.categoryImages = saved ? { ...DEFAULT_CATEGORY_IMAGES, ...JSON.parse(saved) } : DEFAULT_CATEGORY_IMAGES;
-    } catch {
-      this.categoryImages = DEFAULT_CATEGORY_IMAGES;
-    }
+    // Always use DEFAULT_CATEGORY_IMAGES from data.js (clears stale cache)
+    localStorage.removeItem("lsw_category_images");
+    this.categoryImages = DEFAULT_CATEGORY_IMAGES;
 
     // 10. Active coupon & UI
     this.appliedCoupon = null;
@@ -237,7 +253,9 @@ class Store {
   // Get Calculations
   getTotals() {
     const subtotal = this.cart.reduce((sum, item) => {
-      const itemUnitPrice = item.price + (item.selectedLens?.price || 0);
+      const itemUnitPrice = item.disposalType 
+        ? Math.round(item.price * (item.disposalType.priceMultiplier || item.disposalType.multiplier || 1.0))
+        : item.price + (item.selectedLens?.price || 0);
       return sum + (itemUnitPrice * item.qty);
     }, 0);
 
@@ -274,14 +292,16 @@ class Store {
     const {
       selectedColor = product.color || (product.colors && product.colors[0]) || "Standard",
       selectedLens = null,
+      disposalType = null,
       readingPower = null,
       prescriptionMethod = null,
       prescriptionDetails = null,
+      prescriptionData = null,
       prescriptionFile = null,
       qty = 1
     } = options;
 
-    const cartItemId = `${product.id}-${selectedColor}-${selectedLens?.id || 'frame'}-${readingPower || 'std'}`;
+    const cartItemId = `${product.id}-${selectedColor}-${selectedLens?.id || 'frame'}-${disposalType?.id || 'std'}-${readingPower || 'std'}`;
     const existingIdx = this.cart.findIndex(item => item.cartItemId === cartItemId);
 
     if (existingIdx > -1) {
@@ -292,9 +312,11 @@ class Store {
         cartItemId,
         selectedColor,
         selectedLens,
+        disposalType,
         readingPower,
         prescriptionMethod,
-        prescriptionDetails,
+        prescriptionDetails: prescriptionDetails || prescriptionData,
+        prescriptionData: prescriptionData || prescriptionDetails,
         prescriptionFile,
         qty
       });
@@ -467,8 +489,103 @@ class Store {
 
   deleteProduct(productId) {
     this.products = this.products.filter(p => p.id !== productId);
+    try {
+      const deleted = new Set(JSON.parse(localStorage.getItem("lsw_deleted_products") || "[]"));
+      deleted.add(productId);
+      localStorage.setItem("lsw_deleted_products", JSON.stringify(Array.from(deleted)));
+    } catch(e) {}
     this.saveProducts();
     this.showToast("Product removed from catalog.", "info");
+    this.notify("products_updated");
+  }
+
+  bulkDeleteProducts(productIds) {
+    const idSet = new Set(productIds);
+    this.products = this.products.filter(p => !idSet.has(p.id));
+    try {
+      const deleted = new Set(JSON.parse(localStorage.getItem("lsw_deleted_products") || "[]"));
+      productIds.forEach(id => deleted.add(id));
+      localStorage.setItem("lsw_deleted_products", JSON.stringify(Array.from(deleted)));
+    } catch(e) {}
+    this.saveProducts();
+    this.showToast(`Deleted ${productIds.length} products successfully!`, "info");
+    this.notify("products_updated");
+  }
+
+  bulkMoveCategory(productIds, newCategory) {
+    const idSet = new Set(productIds);
+    let count = 0;
+    this.products = this.products.map(p => {
+      if (idSet.has(p.id)) {
+        count++;
+        return { ...p, type: newCategory };
+      }
+      return p;
+    });
+    this.saveProducts();
+    this.showToast(`Moved ${count} products to "${newCategory}"!`, "success");
+    this.notify("products_updated");
+  }
+
+  bulkChangeGender(productIds, newGender) {
+    const idSet = new Set(productIds);
+    const newCats = newGender === 'unisex' ? ['men', 'women', 'unisex'] : [newGender];
+    let count = 0;
+    this.products = this.products.map(p => {
+      if (idSet.has(p.id)) {
+        count++;
+        return { ...p, gender: newGender, cats: newCats };
+      }
+      return p;
+    });
+    this.saveProducts();
+    this.showToast(`Updated gender to "${newGender}" for ${count} products!`, "success");
+    this.notify("products_updated");
+  }
+
+  bulkSetFeatured(productIds, isFeatured = true) {
+    const idSet = new Set(productIds);
+    let count = 0;
+    this.products = this.products.map(p => {
+      if (idSet.has(p.id)) {
+        count++;
+        return { 
+          ...p, 
+          isFeatured: Boolean(isFeatured), 
+          featured: Boolean(isFeatured), 
+          bestSeller: Boolean(isFeatured) 
+        };
+      }
+      return p;
+    });
+    this.saveProducts();
+    this.showToast(`${isFeatured ? '⭐ Marked as Featured on Home' : 'Removed from Featured'} for ${count} products!`, "success");
+    this.notify("products_updated");
+  }
+
+  toggleProductFeatured(productId) {
+    const p = this.products.find(item => item.id === productId);
+    if (p) {
+      const nextVal = !(p.isFeatured || p.featured);
+      p.isFeatured = nextVal;
+      p.featured = nextVal;
+      p.bestSeller = nextVal;
+      this.saveProducts();
+      this.showToast(`Product "${p.name}" ${nextVal ? 'marked as Featured ⭐' : 'removed from Featured'}!`, "success");
+      this.notify("products_updated");
+    }
+  }
+
+  bulkUpdateProducts(productIds, updatedFields) {
+    const idSet = new Set(productIds);
+    this.products = this.products.map(p => {
+      if (idSet.has(p.id)) {
+        return { ...p, ...updatedFields };
+      }
+      return p;
+    });
+    this.saveProducts();
+    this.showToast(`Updated ${productIds.length} products!`, "success");
     this.notify("products_updated");
   }
 
