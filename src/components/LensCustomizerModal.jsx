@@ -259,14 +259,13 @@ export default function LensCustomizerModal({ product, onClose }) {
                   <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
                     <div className="text-xs font-semibold text-slate-700 flex items-center justify-between">
                       <span>Select Power for Each Eye</span>
-                      <span className="text-slate-400 text-[11px]">OD: Right Eye · OS: Left Eye</span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                      {/* Right Eye (OD) */}
+                      {/* Right Eye */}
                       <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-1.5">
                         <label className="block text-xs font-bold text-slate-800">
-                          Right Eye (OD) Sphere Power:
+                          Right Eye Sphere Power:
                         </label>
                         <select
                           value={manualPower.odSphere}
@@ -279,10 +278,10 @@ export default function LensCustomizerModal({ product, onClose }) {
                         </select>
                       </div>
 
-                      {/* Left Eye (OS) */}
+                      {/* Left Eye */}
                       <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-1.5">
                         <label className="block text-xs font-bold text-slate-800">
-                          Left Eye (OS) Sphere Power:
+                          Left Eye Sphere Power:
                         </label>
                         <select
                           value={manualPower.osSphere}
@@ -522,7 +521,7 @@ export default function LensCustomizerModal({ product, onClose }) {
                   {prescriptionMethod === 'manual' && (
                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-4">
                       <div className="text-xs font-semibold text-slate-700 flex items-center justify-between">
-                        <span>Power Matrix (OD: Right Eye, OS: Left Eye)</span>
+                        <span>Power Matrix</span>
                         <span className="text-slate-400 text-[11px]">Consult your optical prescription slip</span>
                       </div>
 
@@ -533,9 +532,9 @@ export default function LensCustomizerModal({ product, onClose }) {
                         <div>Axis (0-180)</div>
                       </div>
 
-                      {/* Right Eye (OD) */}
+                      {/* Right Eye */}
                       <div className="grid grid-cols-4 gap-2 items-center text-xs">
-                        <span className="font-bold text-slate-800 text-center">OD (Right)</span>
+                        <span className="font-bold text-slate-800 text-center">Right Eye</span>
                         <select
                           value={manualPower.odSphere}
                           onChange={(e) => setManualPower({ ...manualPower, odSphere: e.target.value })}
@@ -559,9 +558,9 @@ export default function LensCustomizerModal({ product, onClose }) {
                         />
                       </div>
 
-                      {/* Left Eye (OS) */}
+                      {/* Left Eye */}
                       <div className="grid grid-cols-4 gap-2 items-center text-xs">
-                        <span className="font-bold text-slate-800 text-center">OS (Left)</span>
+                        <span className="font-bold text-slate-800 text-center">Left Eye</span>
                         <select
                           value={manualPower.osSphere}
                           onChange={(e) => setManualPower({ ...manualPower, osSphere: e.target.value })}

@@ -28,7 +28,13 @@ export function formatOrderForWhatsApp(order) {
     
     let rxInfo = "";
     if (item.prescriptionData) {
-      rxInfo = `\n   ├ Eye Power: Right(Sph ${item.prescriptionData.right?.sph}, Cyl ${item.prescriptionData.right?.cyl}) | Left(Sph ${item.prescriptionData.left?.sph}, Cyl ${item.prescriptionData.left?.cyl})`;
+      const rAxis = item.prescriptionData.right?.axis && item.prescriptionData.right.axis !== '-' ? `, Axis ${item.prescriptionData.right.axis}` : '';
+      const lAxis = item.prescriptionData.left?.axis && item.prescriptionData.left.axis !== '-' ? `, Axis ${item.prescriptionData.left.axis}` : '';
+      rxInfo = `\n   ├ Eye Power: Right Eye(SPH ${item.prescriptionData.right?.sph || '0.00'}, CYL ${item.prescriptionData.right?.cyl || '0.00'}${rAxis}) | Left Eye(SPH ${item.prescriptionData.left?.sph || '0.00'}, CYL ${item.prescriptionData.left?.cyl || '0.00'}${lAxis})`;
+    } else if (item.prescriptionDetails) {
+      const rAxis = item.prescriptionDetails.odAxis && item.prescriptionDetails.odAxis !== '-' ? `, Axis ${item.prescriptionDetails.odAxis}` : '';
+      const lAxis = item.prescriptionDetails.osAxis && item.prescriptionDetails.osAxis !== '-' ? `, Axis ${item.prescriptionDetails.osAxis}` : '';
+      rxInfo = `\n   ├ Eye Power: Right Eye(SPH ${item.prescriptionDetails.odSphere || '0.00'}, CYL ${item.prescriptionDetails.odCyl || '0.00'}${rAxis}) | Left Eye(SPH ${item.prescriptionDetails.osSphere || '0.00'}, CYL ${item.prescriptionDetails.osCyl || '0.00'}${lAxis})`;
     } else if (item.prescriptionMethod === 'upload') {
       rxInfo = `\n   ├ Prescription: Uploaded Slip (${item.prescriptionFile?.name || 'Photo Attached'})`;
     } else if (item.prescriptionMethod === 'whatsapp') {

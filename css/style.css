@@ -602,6 +602,25 @@ input, select, textarea {
   gap: 0.75rem;
 }
 
+.demographic-grid-sunglasses {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .demographic-grid-sunglasses {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 550px) {
+  .demographic-grid-sunglasses {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+  }
+}
+
 .demo-card {
   display: flex;
   flex-direction: column;
@@ -4660,17 +4679,26 @@ input:checked + .admin-slider:before {
 
 .pdp-vision-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.45rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.55rem;
+}
+
+@media (max-width: 768px) {
+  .pdp-vision-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.5rem;
+  }
 }
 
 .pdp-vision-card {
   border: 1.5px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 0.45rem 0.55rem;
+  border-radius: 10px;
+  padding: 0.55rem 0.65rem;
   cursor: pointer;
   background: #ffffff;
   transition: all 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .pdp-total-summary-row {

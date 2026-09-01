@@ -1,5 +1,5 @@
 // LENS S WORLD - Clean UI Components & View Renderer
-import { STORE_INFO, CATEGORIES, GENDER_CATEGORIES, LENS_PACKAGES, PRESCRIPTION_POWER_OPTIONS, COUPONS, ORDER_STATUSES } from './data.js';
+import { STORE_INFO, CATEGORIES, GENDER_CATEGORIES, LENS_PACKAGES, PRESCRIPTION_POWER_OPTIONS, COUPONS, ORDER_STATUSES, READER_POWERS } from './data.js';
 import { store } from './store.js';
 import { getWhatsAppUrl, getProductEnquiryUrl, formatOrderForWhatsApp } from './whatsapp.js';
 
@@ -190,11 +190,11 @@ export const UI = {
               <span class="demo-label">Kids</span>
             </a>
 
-            <a href="#shop?category=eyeglasses" class="demo-card">
+            <a href="#shop?category=eyeglasses&gender=unisex" class="demo-card">
               <div class="demo-thumb-box contain-img">
-                <img src="${store.getCatImg('eye_essentials', 'images/essentials_frame.png')}" alt="Essentials" />
+                <img src="${store.getCatImg('eye_unisex', 'https://images.unsplash.com/photo-1591076482161-42ce6da69f67?auto=format&fit=crop&w=768&q=80')}" alt="Unisex Eyeglasses" />
               </div>
-              <span class="demo-label">Essentials</span>
+              <span class="demo-label">Unisex</span>
             </a>
           </div>
 
@@ -207,7 +207,7 @@ export const UI = {
         </div>
       </section>
 
-      <!-- 2. Sunglasses Section (4 Demographic Cards + 4 Featured Products) -->
+      <!-- 2. Sunglasses Section (7 Demographic & Category Cards + 4 Featured Products) -->
       <section class="demographic-section" style="padding-top: 1rem; padding-bottom: 2rem; border-top: 1px solid #f1f5f9;">
         <div class="container">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
@@ -217,7 +217,7 @@ export const UI = {
             </a>
           </div>
 
-          <div class="demographic-grid">
+          <div class="demographic-grid demographic-grid-sunglasses">
             <a href="#shop?category=sunglasses&gender=men" class="demo-card">
               <div class="demo-thumb-box contain-img">
                 <img src="${store.getCatImg('sun_men', 'https://chashmah.com/wp-content/uploads/2026/08/1001073284_768x768.webp')}" alt="Men Sunglasses" />
@@ -239,11 +239,32 @@ export const UI = {
               <span class="demo-label">Kids</span>
             </a>
 
-            <a href="#shop?category=sunglasses" class="demo-card">
+            <a href="#shop?category=sunglasses&gender=unisex" class="demo-card">
               <div class="demo-thumb-box contain-img">
-                <img src="${store.getCatImg('sun_essentials', 'images/essentials_frame.png')}" alt="Essentials Sunglasses" />
+                <img src="${store.getCatImg('sun_unisex', 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=768&q=80')}" alt="Unisex Sunglasses" />
               </div>
-              <span class="demo-label">Essentials</span>
+              <span class="demo-label">Unisex</span>
+            </a>
+
+            <a href="#shop?category=sunglasses&tag=couple" class="demo-card">
+              <div class="demo-thumb-box contain-img">
+                <img src="${store.getCatImg('sun_couple', 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=768&q=80')}" alt="Couple Sunglasses" />
+              </div>
+              <span class="demo-label">Couple</span>
+            </a>
+
+            <a href="#shop?category=sunglasses&tag=clip-on" class="demo-card">
+              <div class="demo-thumb-box contain-img">
+                <img src="${store.getCatImg('sun_clipon', 'https://images.unsplash.com/photo-1574258495973-f010dfbb5371?auto=format&fit=crop&w=768&q=80')}" alt="Clip-on Sunglasses" />
+              </div>
+              <span class="demo-label">Clip-on</span>
+            </a>
+
+            <a href="#shop?category=sunglasses&tag=sports" class="demo-card">
+              <div class="demo-thumb-box contain-img">
+                <img src="${store.getCatImg('sun_sports', 'https://images.unsplash.com/photo-1508296695146-257a814070b4?auto=format&fit=crop&w=768&q=80')}" alt="Sports Sunglasses" />
+              </div>
+              <span class="demo-label">Sports</span>
             </a>
           </div>
 
@@ -358,9 +379,9 @@ export const UI = {
     `;
   },
 
-  // Render Shop Page with 6 Categories & 3 Genders
+  // Render Shop Page with 6 Categories & 4 Genders & Filters
   renderShopPage(filter = {}) {
-    const { category = 'all', gender = 'all', sort = 'latest' } = filter;
+    const { category = 'all', gender = 'all', tag = 'all', sort = 'latest' } = filter;
 
     let filtered = [...store.products];
 
@@ -380,6 +401,16 @@ export const UI = {
 
     if (gender && gender !== 'all') {
       filtered = filtered.filter(p => p.gender === gender || (p.cats && p.cats.includes(gender)));
+    }
+
+    if (tag && tag !== 'all') {
+      const tagLower = tag.toLowerCase();
+      filtered = filtered.filter(p => 
+        (p.tags && p.tags.some(t => t.toLowerCase().includes(tagLower))) ||
+        (p.name && p.name.toLowerCase().includes(tagLower)) ||
+        (p.shape && p.shape.toLowerCase().includes(tagLower)) ||
+        (p.description && p.description.toLowerCase().includes(tagLower))
+      );
     }
 
     if (sort === 'price_low') {
@@ -736,8 +767,8 @@ export const UI = {
 
                     <!-- Prescription Manual Values Box -->
                     <div id="pdp-rx-manual-box" style="display:none; background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:0.6rem; font-size:0.72rem;">
-                      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.4rem; font-weight:700; color:#64748b; margin-bottom:0.3rem;">
-                        <span>Right Eye (OD)</span><span>Left Eye (OS)</span>
+                      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.4rem; font-weight:700; color:#000040; margin-bottom:0.3rem;">
+                        <span>Right Eye</span><span>Left Eye</span>
                       </div>
                       <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.4rem;">
                         <select id="pdp-od-sph" style="padding:0.35rem; border:1px solid #cbd5e1; border-radius:6px; font-size:0.75rem;">
@@ -789,7 +820,7 @@ export const UI = {
                 <!-- FLOW C: READERS / READING GLASSES PDP -->
                 <div class="pdp-compact-section">
                   <!-- Select Size -->
-                  <div style="margin-bottom:1.15rem;">
+                  <div style="margin-bottom:1rem;">
                     <div class="pdp-section-lbl" style="margin-bottom:0.15rem;">Select Size</div>
                     <div style="font-size:0.75rem; color:#64748b; margin-bottom:0.55rem;">Choose your comfortable fit</div>
                     <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:0.45rem;">
@@ -802,16 +833,88 @@ export const UI = {
                     </div>
                   </div>
 
-                  <!-- Select Reading Power -->
+                  <!-- Select Power & Prescription Methods -->
                   <div>
-                    <div class="pdp-section-lbl" style="margin-bottom:0.55rem;">Select Reading Power</div>
-                    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:0.45rem;">
-                      ${['+1.00', '+1.50', '+2.00', '+2.50', '+3.00', '+3.50'].map((pow, idx) => `
-                        <button type="button" class="pdp-power-btn ${idx === 0 ? 'selected' : ''}" 
-                                onclick="window.selectPdpPower(this, '${pow}')">
-                          ${pow}
-                        </button>
-                      `).join('')}
+                    <div class="pdp-section-lbl" style="margin-bottom:0.45rem;">Select Power & Prescription:</div>
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.75rem;">
+                      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.45rem; margin-bottom:0.65rem;">
+                        <label class="pdp-rx-pill active" onclick="window.switchPdpRxMethod('quick')">
+                          <input type="radio" name="pdp-rx-method" value="quick" checked style="display:none;" />
+                          <span style="font-size:0.74rem; font-weight:700;">⚡ Quick Power</span>
+                        </label>
+                        <label class="pdp-rx-pill" onclick="window.switchPdpRxMethod('upload')">
+                          <input type="radio" name="pdp-rx-method" value="upload" style="display:none;" />
+                          <span style="font-size:0.74rem; font-weight:700;">📤 Upload Slip</span>
+                        </label>
+                        <label class="pdp-rx-pill" onclick="window.switchPdpRxMethod('whatsapp')">
+                          <input type="radio" name="pdp-rx-method" value="whatsapp" style="display:none;" />
+                          <span style="font-size:0.74rem; font-weight:700;">📲 WhatsApp Rx</span>
+                        </label>
+                        <label class="pdp-rx-pill" onclick="window.switchPdpRxMethod('manual')">
+                          <input type="radio" name="pdp-rx-method" value="manual" style="display:none;" />
+                          <span style="font-size:0.74rem; font-weight:700;">✍️ Enter Power</span>
+                        </label>
+                      </div>
+
+                      <!-- 1. Quick Power Grid (.25 Increments) -->
+                      <div id="pdp-rx-quick-box">
+                        <div style="font-size:0.72rem; color:#64748b; margin-bottom:0.45rem; font-weight:600;">Choose optical power (+0.25 steps):</div>
+                        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(68px, 1fr)); gap:0.45rem;">
+                          ${READER_POWERS.map((pow, idx) => `
+                            <button type="button" class="pdp-power-btn ${idx === 0 ? 'selected' : ''}" 
+                                    onclick="window.selectPdpPower(this, '${pow}')">
+                              ${pow}
+                            </button>
+                          `).join('')}
+                        </div>
+                      </div>
+
+                      <!-- 2. Prescription Upload Box -->
+                      <div id="pdp-rx-upload-box" style="display:none; border:1.5px dashed #cbd5e1; border-radius:8px; padding:0.75rem; text-align:center; background:#fff; cursor:pointer;">
+                        <input type="file" id="pdp-rx-file" accept="image/*,application/pdf" style="display:none;" onchange="window.handleRxUpload(event)" />
+                        <label for="pdp-rx-file" style="cursor:pointer; display:block;">
+                          <span style="font-size:0.78rem; font-weight:700; color:#000040;" id="pdp-rx-file-lbl">📁 Attach Photo / Prescription Slip</span>
+                          <span style="font-size:0.68rem; color:#64748b; display:block; margin-top:2px;">Camera photo or doctor slip (PDF/JPG)</span>
+                        </label>
+                      </div>
+
+                      <!-- 3. Prescription WhatsApp Box -->
+                      <div id="pdp-rx-whatsapp-box" style="display:none; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; padding:0.65rem 0.85rem; font-size:0.76rem; color:#065f46;">
+                        ✓ Place your order now. You can WhatsApp your prescription photo after checkout to <strong>+91 86686 87897</strong>.
+                      </div>
+
+                      <!-- 4. Prescription Manual Values Box -->
+                      <div id="pdp-rx-manual-box" style="display:none; background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:0.65rem; font-size:0.72rem;">
+                        <div style="display:grid; grid-template-columns:1.2fr 1fr 1fr 1fr; gap:0.35rem; font-weight:700; color:#64748b; margin-bottom:0.35rem; text-align:center;">
+                          <span style="text-align:left;">Eye</span><span>SPH</span><span>CYL</span><span>AXIS</span>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1.2fr 1fr 1fr 1fr; gap:0.35rem; align-items:center; margin-bottom:0.35rem;">
+                          <strong style="color:#000040; font-size:0.75rem;">Right Eye</strong>
+                          <select id="pdp-od-sph" style="padding:0.25rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.72rem;">
+                            ${PRESCRIPTION_POWER_OPTIONS.spheres.map(s => `<option value="${s}" ${s === '+1.00' ? 'selected' : ''}>${s}</option>`).join('')}
+                          </select>
+                          <select id="pdp-od-cyl" style="padding:0.25rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.72rem;">
+                            ${PRESCRIPTION_POWER_OPTIONS.cylinders.map(c => `<option value="${c}">${c}</option>`).join('')}
+                          </select>
+                          <select id="pdp-od-axis" style="padding:0.25rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.72rem;">
+                            <option value="-">-</option>
+                            ${PRESCRIPTION_POWER_OPTIONS.axis.map(a => `<option value="${a}">${a}</option>`).join('')}
+                          </select>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1.2fr 1fr 1fr 1fr; gap:0.35rem; align-items:center;">
+                          <strong style="color:#000040; font-size:0.75rem;">Left Eye</strong>
+                          <select id="pdp-os-sph" style="padding:0.25rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.72rem;">
+                            ${PRESCRIPTION_POWER_OPTIONS.spheres.map(s => `<option value="${s}" ${s === '+1.00' ? 'selected' : ''}>${s}</option>`).join('')}
+                          </select>
+                          <select id="pdp-os-cyl" style="padding:0.25rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.72rem;">
+                            ${PRESCRIPTION_POWER_OPTIONS.cylinders.map(c => `<option value="${c}">${c}</option>`).join('')}
+                          </select>
+                          <select id="pdp-os-axis" style="padding:0.25rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.72rem;">
+                            <option value="-">-</option>
+                            ${PRESCRIPTION_POWER_OPTIONS.axis.map(a => `<option value="${a}">${a}</option>`).join('')}
+                          </select>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -855,25 +958,33 @@ export const UI = {
 
                     <!-- Prescription Manual Values Box -->
                     <div id="pdp-rx-manual-box" style="display:none; background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:0.65rem; font-size:0.72rem;">
-                      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.4rem; font-weight:700; color:#64748b; margin-bottom:0.3rem;">
-                        <span>Eye</span><span>SPH</span><span>CYL</span>
+                      <div style="display:grid; grid-template-columns:1.2fr 1fr 1fr 1fr; gap:0.35rem; font-weight:700; color:#64748b; margin-bottom:0.35rem; text-align:center;">
+                        <span style="text-align:left;">Eye</span><span>SPH</span><span>CYL</span><span>AXIS</span>
                       </div>
-                      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.4rem; align-items:center; margin-bottom:0.3rem;">
-                        <strong style="color:#000040;">Right (OD)</strong>
+                      <div style="display:grid; grid-template-columns:1.2fr 1fr 1fr 1fr; gap:0.35rem; align-items:center; margin-bottom:0.35rem;">
+                        <strong style="color:#000040; font-size:0.75rem;">Right Eye</strong>
                         <select id="pdp-od-sph" style="padding:0.25rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.72rem;">
                           ${PRESCRIPTION_POWER_OPTIONS.spheres.map(s => `<option value="${s}" ${s === '0.00 (Plano)' ? 'selected' : ''}>${s}</option>`).join('')}
                         </select>
                         <select id="pdp-od-cyl" style="padding:0.25rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.72rem;">
                           ${PRESCRIPTION_POWER_OPTIONS.cylinders.map(c => `<option value="${c}">${c}</option>`).join('')}
                         </select>
+                        <select id="pdp-od-axis" style="padding:0.25rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.72rem;">
+                          <option value="-">-</option>
+                          ${PRESCRIPTION_POWER_OPTIONS.axis.map(a => `<option value="${a}">${a}</option>`).join('')}
+                        </select>
                       </div>
-                      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.4rem; align-items:center;">
-                        <strong style="color:#000040;">Left (OS)</strong>
+                      <div style="display:grid; grid-template-columns:1.2fr 1fr 1fr 1fr; gap:0.35rem; align-items:center;">
+                        <strong style="color:#000040; font-size:0.75rem;">Left Eye</strong>
                         <select id="pdp-os-sph" style="padding:0.25rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.72rem;">
                           ${PRESCRIPTION_POWER_OPTIONS.spheres.map(s => `<option value="${s}" ${s === '0.00 (Plano)' ? 'selected' : ''}>${s}</option>`).join('')}
                         </select>
                         <select id="pdp-os-cyl" style="padding:0.25rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.72rem;">
                           ${PRESCRIPTION_POWER_OPTIONS.cylinders.map(c => `<option value="${c}">${c}</option>`).join('')}
+                        </select>
+                        <select id="pdp-os-axis" style="padding:0.25rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.72rem;">
+                          <option value="-">-</option>
+                          ${PRESCRIPTION_POWER_OPTIONS.axis.map(a => `<option value="${a}">${a}</option>`).join('')}
                         </select>
                       </div>
                     </div>
@@ -979,43 +1090,33 @@ export const UI = {
 
                       <!-- Prescription Manual Values Box -->
                       <div id="pdp-rx-manual-box" style="display:none; background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:0.6rem; font-size:0.72rem;">
-                        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.4rem; font-weight:700; color:#64748b; margin-bottom:0.3rem;">
-                          <span>Eye</span><span>SPH</span><span>CYL</span>
+                        <div style="display:grid; grid-template-columns:1.2fr 1fr 1fr 1fr; gap:0.35rem; font-weight:700; color:#64748b; margin-bottom:0.35rem; text-align:center;">
+                          <span style="text-align:left;">Eye</span><span>SPH</span><span>CYL</span><span>AXIS</span>
                         </div>
-                        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.4rem; align-items:center; margin-bottom:0.3rem;">
-                          <strong style="color:#000040;">Right (OD)</strong>
+                        <div style="display:grid; grid-template-columns:1.2fr 1fr 1fr 1fr; gap:0.35rem; align-items:center; margin-bottom:0.35rem;">
+                          <strong style="color:#000040; font-size:0.75rem;">Right Eye</strong>
                           <select id="pdp-od-sph" style="padding:0.25rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.72rem;">
-                            <option value="0.00">0.00</option>
-                            <option value="-0.50">-0.50</option>
-                            <option value="-1.00">-1.00</option>
-                            <option value="-1.50">-1.50</option>
-                            <option value="-2.00">-2.00</option>
-                            <option value="+1.00">+1.00</option>
-                            <option value="+1.50">+1.50</option>
-                            <option value="+2.00">+2.00</option>
+                            ${PRESCRIPTION_POWER_OPTIONS.spheres.map(s => `<option value="${s}" ${s === '0.00 (Plano)' ? 'selected' : ''}>${s}</option>`).join('')}
                           </select>
                           <select id="pdp-od-cyl" style="padding:0.25rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.72rem;">
-                            <option value="0.00">0.00</option>
-                            <option value="-0.50">-0.50</option>
-                            <option value="-1.00">-1.00</option>
+                            ${PRESCRIPTION_POWER_OPTIONS.cylinders.map(c => `<option value="${c}">${c}</option>`).join('')}
+                          </select>
+                          <select id="pdp-od-axis" style="padding:0.25rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.72rem;">
+                            <option value="-">-</option>
+                            ${PRESCRIPTION_POWER_OPTIONS.axis.map(a => `<option value="${a}">${a}</option>`).join('')}
                           </select>
                         </div>
-                        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.4rem; align-items:center;">
-                          <strong style="color:#000040;">Left (OS)</strong>
+                        <div style="display:grid; grid-template-columns:1.2fr 1fr 1fr 1fr; gap:0.35rem; align-items:center;">
+                          <strong style="color:#000040; font-size:0.75rem;">Left Eye</strong>
                           <select id="pdp-os-sph" style="padding:0.25rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.72rem;">
-                            <option value="0.00">0.00</option>
-                            <option value="-0.50">-0.50</option>
-                            <option value="-1.00">-1.00</option>
-                            <option value="-1.50">-1.50</option>
-                            <option value="-2.00">-2.00</option>
-                            <option value="+1.00">+1.00</option>
-                            <option value="+1.50">+1.50</option>
-                            <option value="+2.00">+2.00</option>
+                            ${PRESCRIPTION_POWER_OPTIONS.spheres.map(s => `<option value="${s}" ${s === '0.00 (Plano)' ? 'selected' : ''}>${s}</option>`).join('')}
                           </select>
                           <select id="pdp-os-cyl" style="padding:0.25rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.72rem;">
-                            <option value="0.00">0.00</option>
-                            <option value="-0.50">-0.50</option>
-                            <option value="-1.00">-1.00</option>
+                            ${PRESCRIPTION_POWER_OPTIONS.cylinders.map(c => `<option value="${c}">${c}</option>`).join('')}
+                          </select>
+                          <select id="pdp-os-axis" style="padding:0.25rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.72rem;">
+                            <option value="-">-</option>
+                            ${PRESCRIPTION_POWER_OPTIONS.axis.map(a => `<option value="${a}">${a}</option>`).join('')}
                           </select>
                         </div>
                       </div>
@@ -2341,14 +2442,14 @@ export const UI = {
               <!-- Section B: Eyeglasses Demographic Model Photos -->
               <div>
                 <h4 style="color:#000040; font-size:0.95rem; margin-bottom:0.75rem; border-bottom:1px solid #e2e8f0; padding-bottom:0.4rem;">
-                  2. Eyeglasses Demographic Grid (Men, Women, Kids, Essentials)
+                  2. Eyeglasses Demographic Grid (Men, Women, Kids, Unisex)
                 </h4>
                 <div class="admin-grid-4">
                   ${[
                     { id: 'eye_men', label: '👨 Men Eyeglasses' },
                     { id: 'eye_women', label: '👩 Women Eyeglasses' },
                     { id: 'eye_kids', label: '🧒 Kids Eyeglasses' },
-                    { id: 'eye_essentials', label: '⭐ Essentials Eyeglasses' }
+                    { id: 'eye_unisex', label: '👥 Unisex Eyeglasses' }
                   ].map(c => `
                     <div class="admin-card-inner" style="background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem; text-align:center;">
                       <label class="admin-lbl" style="font-weight:700; color:#000040; margin-bottom:0.4rem; display:block;">${c.label}</label>
@@ -2365,17 +2466,20 @@ export const UI = {
                 </div>
               </div>
 
-              <!-- Section C: Sunglasses Demographic Model Photos -->
+              <!-- Section C: Sunglasses Demographic & Collection Model Photos -->
               <div>
                 <h4 style="color:#000040; font-size:0.95rem; margin-bottom:0.75rem; border-bottom:1px solid #e2e8f0; padding-bottom:0.4rem;">
-                  3. Sunglasses Demographic Grid (Men, Women, Kids, Essentials)
+                  3. Sunglasses Grid (Men, Women, Kids, Unisex, Couple, Clip-on, Sports)
                 </h4>
-                <div class="admin-grid-4">
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:1rem;">
                   ${[
                     { id: 'sun_men', label: '🕶️ Men Sunglasses' },
                     { id: 'sun_women', label: '🕶️ Women Sunglasses' },
                     { id: 'sun_kids', label: '🧒 Kids Sunglasses' },
-                    { id: 'sun_essentials', label: '⭐ Essentials Sunglasses' }
+                    { id: 'sun_unisex', label: '👥 Unisex Sunglasses' },
+                    { id: 'sun_couple', label: '💑 Couple Sunglasses' },
+                    { id: 'sun_clipon', label: '📎 Clip-on Sunglasses' },
+                    { id: 'sun_sports', label: '🚴 Sports Sunglasses' }
                   ].map(c => `
                     <div class="admin-card-inner" style="background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem; text-align:center;">
                       <label class="admin-lbl" style="font-weight:700; color:#000040; margin-bottom:0.4rem; display:block;">${c.label}</label>

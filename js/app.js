@@ -83,11 +83,13 @@ window.updatePdpTotal = function(productId, lensPrice, lensName, lensId) {
 };
 
 window.switchPdpRxMethod = function(method) {
+  const quickBox = document.getElementById('pdp-rx-quick-box');
   const uploadBox = document.getElementById('pdp-rx-upload-box');
   const whatsappBox = document.getElementById('pdp-rx-whatsapp-box');
   const manualBox = document.getElementById('pdp-rx-manual-box');
   const zeroBox = document.getElementById('pdp-rx-zero-box');
 
+  if (quickBox) quickBox.style.display = method === 'quick' ? 'block' : 'none';
   if (uploadBox) uploadBox.style.display = method === 'upload' ? 'block' : 'none';
   if (whatsappBox) whatsappBox.style.display = method === 'whatsapp' ? 'block' : 'none';
   if (manualBox) manualBox.style.display = method === 'manual' ? 'block' : 'none';
@@ -190,10 +192,39 @@ window.AppEvents = {
     const product = store.products.find(p => p.id === productId);
     if (!product) return;
     const isReader = product.type === 'reading-glasses';
+
+    const rxMethodRadio = document.querySelector('input[name="pdp-rx-method"]:checked');
+    const rxMethod = isReader ? (rxMethodRadio ? rxMethodRadio.value : 'quick') : null;
+
+    let rxDetails = null;
+    if (rxMethod === 'manual') {
+      rxDetails = {
+        right: {
+          sph: document.getElementById('pdp-od-sph')?.value || '+1.00',
+          cyl: document.getElementById('pdp-od-cyl')?.value || '0.00',
+          axis: document.getElementById('pdp-od-axis')?.value || '-'
+        },
+        left: {
+          sph: document.getElementById('pdp-os-sph')?.value || '+1.00',
+          cyl: document.getElementById('pdp-os-cyl')?.value || '0.00',
+          axis: document.getElementById('pdp-os-axis')?.value || '-'
+        },
+        odSphere: document.getElementById('pdp-od-sph')?.value || '+1.00',
+        odCyl: document.getElementById('pdp-od-cyl')?.value || '0.00',
+        odAxis: document.getElementById('pdp-od-axis')?.value || '-',
+        osSphere: document.getElementById('pdp-os-sph')?.value || '+1.00',
+        osCyl: document.getElementById('pdp-os-cyl')?.value || '0.00',
+        osAxis: document.getElementById('pdp-os-axis')?.value || '-'
+      };
+    }
+
     store.addToCart(product, { 
       selectedColor: window.pdpSelectedColor || product.color || 'Midnight Black',
       readingPower: isReader ? (window.pdpSelectedReadingPower || '+1.00') : null,
-      size: isReader ? (window.pdpSelectedSize || 'Medium') : product.size
+      size: isReader ? (window.pdpSelectedSize || 'Medium') : product.size,
+      prescriptionMethod: rxMethod,
+      prescriptionFile: window.rxUploadedFile,
+      prescriptionDetails: rxDetails
     });
   },
 
@@ -211,10 +242,22 @@ window.AppEvents = {
     let rxDetails = null;
     if (rxMethod === 'manual') {
       rxDetails = {
+        right: {
+          sph: document.getElementById('pdp-od-sph')?.value || '0.00',
+          cyl: document.getElementById('pdp-od-cyl')?.value || '0.00',
+          axis: document.getElementById('pdp-od-axis')?.value || '-'
+        },
+        left: {
+          sph: document.getElementById('pdp-os-sph')?.value || '0.00',
+          cyl: document.getElementById('pdp-os-cyl')?.value || '0.00',
+          axis: document.getElementById('pdp-os-axis')?.value || '-'
+        },
         odSphere: document.getElementById('pdp-od-sph')?.value || '0.00',
         odCyl: document.getElementById('pdp-od-cyl')?.value || '0.00',
+        odAxis: document.getElementById('pdp-od-axis')?.value || '-',
         osSphere: document.getElementById('pdp-os-sph')?.value || '0.00',
-        osCyl: document.getElementById('pdp-os-cyl')?.value || '0.00'
+        osCyl: document.getElementById('pdp-os-cyl')?.value || '0.00',
+        osAxis: document.getElementById('pdp-os-axis')?.value || '-'
       };
     }
 
@@ -237,10 +280,22 @@ window.AppEvents = {
     let rxDetails = null;
     if (rxMethod === 'manual') {
       rxDetails = {
+        right: {
+          sph: document.getElementById('pdp-od-sph')?.value || '0.00',
+          cyl: document.getElementById('pdp-od-cyl')?.value || '0.00',
+          axis: document.getElementById('pdp-od-axis')?.value || '-'
+        },
+        left: {
+          sph: document.getElementById('pdp-os-sph')?.value || '0.00',
+          cyl: document.getElementById('pdp-os-cyl')?.value || '0.00',
+          axis: document.getElementById('pdp-os-axis')?.value || '-'
+        },
         odSphere: document.getElementById('pdp-od-sph')?.value || '0.00',
         odCyl: document.getElementById('pdp-od-cyl')?.value || '0.00',
+        odAxis: document.getElementById('pdp-od-axis')?.value || '-',
         osSphere: document.getElementById('pdp-os-sph')?.value || '0.00',
-        osCyl: document.getElementById('pdp-os-cyl')?.value || '0.00'
+        osCyl: document.getElementById('pdp-os-cyl')?.value || '0.00',
+        osAxis: document.getElementById('pdp-os-axis')?.value || '-'
       };
     }
 
@@ -397,13 +452,13 @@ window.AppEvents = {
           <div id="manual-power-box" style="display:none; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.65rem;">
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
               <div style="background:#f1f5f9; padding:0.45rem; border-radius:6px;">
-                <strong style="font-size:0.72rem; color:#000040; display:block; margin-bottom:0.25rem;">Right Eye (OD)</strong>
+                <strong style="font-size:0.72rem; color:#000040; display:block; margin-bottom:0.25rem;">Right Eye</strong>
                 <select id="rx-r-sph" style="width:100%; font-size:0.7rem; padding:0.3rem; border-radius:4px; border:1px solid #cbd5e1;">
                   ${PRESCRIPTION_POWER_OPTIONS.contactLensSpheres.map(s => `<option value="${s}" ${s === '-1.50' ? 'selected' : ''}>${s}</option>`).join('')}
                 </select>
               </div>
               <div style="background:#f1f5f9; padding:0.45rem; border-radius:6px;">
-                <strong style="font-size:0.72rem; color:#000040; display:block; margin-bottom:0.25rem;">Left Eye (OS)</strong>
+                <strong style="font-size:0.72rem; color:#000040; display:block; margin-bottom:0.25rem;">Left Eye</strong>
                 <select id="rx-l-sph" style="width:100%; font-size:0.7rem; padding:0.3rem; border-radius:4px; border:1px solid #cbd5e1;">
                   ${PRESCRIPTION_POWER_OPTIONS.contactLensSpheres.map(s => `<option value="${s}" ${s === '-1.50' ? 'selected' : ''}>${s}</option>`).join('')}
                 </select>
@@ -529,42 +584,34 @@ window.AppEvents = {
 
         <!-- Manual Eye Power Box -->
         <div id="manual-power-box" style="display:none; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.65rem;">
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
-            <div style="background:#f1f5f9; padding:0.45rem; border-radius:6px;">
-              <strong style="font-size:0.72rem; color:#000040; display:block; margin-bottom:0.25rem;">Right Eye (OD / दायां)</strong>
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.25rem;">
-                <div>
-                  <label style="font-size:0.62rem; color:#64748b; display:block;">SPH</label>
-                  <select id="rx-r-sph" style="width:100%; font-size:0.7rem; padding:0.2rem; border-radius:4px; border:1px solid #cbd5e1;">
-                    ${PRESCRIPTION_POWER_OPTIONS.spheres.map(s => `<option value="${s}" ${s === '0.00 (Plano)' ? 'selected' : ''}>${s}</option>`).join('')}
-                  </select>
-                </div>
-                <div>
-                  <label style="font-size:0.62rem; color:#64748b; display:block;">CYL</label>
-                  <select id="rx-r-cyl" style="width:100%; font-size:0.7rem; padding:0.2rem; border-radius:4px; border:1px solid #cbd5e1;">
-                    ${PRESCRIPTION_POWER_OPTIONS.cylinders.map(c => `<option value="${c}">${c}</option>`).join('')}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div style="background:#f1f5f9; padding:0.45rem; border-radius:6px;">
-              <strong style="font-size:0.72rem; color:#000040; display:block; margin-bottom:0.25rem;">Left Eye (OS / बायां)</strong>
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.25rem;">
-                <div>
-                  <label style="font-size:0.62rem; color:#64748b; display:block;">SPH</label>
-                  <select id="rx-l-sph" style="width:100%; font-size:0.7rem; padding:0.2rem; border-radius:4px; border:1px solid #cbd5e1;">
-                    ${PRESCRIPTION_POWER_OPTIONS.spheres.map(s => `<option value="${s}" ${s === '0.00 (Plano)' ? 'selected' : ''}>${s}</option>`).join('')}
-                  </select>
-                </div>
-                <div>
-                  <label style="font-size:0.62rem; color:#64748b; display:block;">CYL</label>
-                  <select id="rx-l-cyl" style="width:100%; font-size:0.7rem; padding:0.2rem; border-radius:4px; border:1px solid #cbd5e1;">
-                    ${PRESCRIPTION_POWER_OPTIONS.cylinders.map(c => `<option value="${c}">${c}</option>`).join('')}
-                  </select>
-                </div>
-              </div>
-            </div>
+          <div style="display:grid; grid-template-columns:1.2fr 1fr 1fr 1fr; gap:0.35rem; font-weight:700; color:#64748b; margin-bottom:0.35rem; text-align:center; font-size:0.72rem;">
+            <span style="text-align:left;">Eye</span><span>SPH</span><span>CYL</span><span>AXIS</span>
+          </div>
+          <div style="display:grid; grid-template-columns:1.2fr 1fr 1fr 1fr; gap:0.35rem; align-items:center; margin-bottom:0.35rem;">
+            <strong style="color:#000040; font-size:0.75rem;">Right Eye</strong>
+            <select id="rx-r-sph" style="width:100%; font-size:0.7rem; padding:0.25rem; border-radius:4px; border:1px solid #cbd5e1;">
+              ${PRESCRIPTION_POWER_OPTIONS.spheres.map(s => `<option value="${s}" ${s === '0.00 (Plano)' ? 'selected' : ''}>${s}</option>`).join('')}
+            </select>
+            <select id="rx-r-cyl" style="width:100%; font-size:0.7rem; padding:0.25rem; border-radius:4px; border:1px solid #cbd5e1;">
+              ${PRESCRIPTION_POWER_OPTIONS.cylinders.map(c => `<option value="${c}">${c}</option>`).join('')}
+            </select>
+            <select id="rx-r-axis" style="width:100%; font-size:0.7rem; padding:0.25rem; border-radius:4px; border:1px solid #cbd5e1;">
+              <option value="-">-</option>
+              ${PRESCRIPTION_POWER_OPTIONS.axis.map(a => `<option value="${a}">${a}</option>`).join('')}
+            </select>
+          </div>
+          <div style="display:grid; grid-template-columns:1.2fr 1fr 1fr 1fr; gap:0.35rem; align-items:center;">
+            <strong style="color:#000040; font-size:0.75rem;">Left Eye</strong>
+            <select id="rx-l-sph" style="width:100%; font-size:0.7rem; padding:0.25rem; border-radius:4px; border:1px solid #cbd5e1;">
+              ${PRESCRIPTION_POWER_OPTIONS.spheres.map(s => `<option value="${s}" ${s === '0.00 (Plano)' ? 'selected' : ''}>${s}</option>`).join('')}
+            </select>
+            <select id="rx-l-cyl" style="width:100%; font-size:0.7rem; padding:0.25rem; border-radius:4px; border:1px solid #cbd5e1;">
+              ${PRESCRIPTION_POWER_OPTIONS.cylinders.map(c => `<option value="${c}">${c}</option>`).join('')}
+            </select>
+            <select id="rx-l-axis" style="width:100%; font-size:0.7rem; padding:0.25rem; border-radius:4px; border:1px solid #cbd5e1;">
+              <option value="-">-</option>
+              ${PRESCRIPTION_POWER_OPTIONS.axis.map(a => `<option value="${a}">${a}</option>`).join('')}
+            </select>
           </div>
         </div>
 
@@ -638,11 +685,13 @@ window.AppEvents = {
       prescriptionData = {
         right: {
           sph: document.getElementById('rx-r-sph')?.value || (isContactLens ? '-1.50' : '0.00'),
-          cyl: document.getElementById('rx-r-cyl')?.value || '0.00'
+          cyl: document.getElementById('rx-r-cyl')?.value || '0.00',
+          axis: document.getElementById('rx-r-axis')?.value || '-'
         },
         left: {
           sph: document.getElementById('rx-l-sph')?.value || (isContactLens ? '-1.50' : '0.00'),
-          cyl: document.getElementById('rx-l-cyl')?.value || '0.00'
+          cyl: document.getElementById('rx-l-cyl')?.value || '0.00',
+          axis: document.getElementById('rx-l-axis')?.value || '-'
         }
       };
     }
@@ -1308,13 +1357,16 @@ window.saveCategoryImagesForm = function(event) {
     eye_men: getVal('catimg_eye_men'),
     eye_women: getVal('catimg_eye_women'),
     eye_kids: getVal('catimg_eye_kids'),
-    eye_essentials: getVal('catimg_eye_essentials'),
+    eye_unisex: getVal('catimg_eye_unisex') || getVal('catimg_eye_essentials'),
 
     // Sunglasses
     sun_men: getVal('catimg_sun_men'),
     sun_women: getVal('catimg_sun_women'),
     sun_kids: getVal('catimg_sun_kids'),
-    sun_essentials: getVal('catimg_sun_essentials')
+    sun_unisex: getVal('catimg_sun_unisex') || getVal('catimg_sun_essentials'),
+    sun_couple: getVal('catimg_sun_couple'),
+    sun_clipon: getVal('catimg_sun_clipon'),
+    sun_sports: getVal('catimg_sun_sports')
   };
 
   store.saveCategoryImages(updatedImages);

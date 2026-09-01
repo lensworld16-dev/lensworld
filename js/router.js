@@ -31,8 +31,9 @@ export function handleRoute() {
     } else if (path === 'shop') {
       const category = params.get('category') || 'all';
       const gender = params.get('gender') || 'all';
+      const tag = params.get('tag') || 'all';
       const sort = params.get('sort') || 'latest';
-      mainApp.innerHTML = UI.renderShopPage({ category, gender, sort });
+      mainApp.innerHTML = UI.renderShopPage({ category, gender, tag, sort });
     } else if (path.startsWith('product/')) {
       const productId = path.replace('product/', '');
       mainApp.innerHTML = UI.renderProductDetailPage(productId);
