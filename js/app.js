@@ -1357,13 +1357,14 @@ window.saveCategoryImagesForm = function(event) {
     eye_men: getVal('catimg_eye_men'),
     eye_women: getVal('catimg_eye_women'),
     eye_kids: getVal('catimg_eye_kids'),
-    eye_unisex: getVal('catimg_eye_unisex') || getVal('catimg_eye_essentials'),
+    eye_unisex: getVal('catimg_eye_unisex'),
+    eye_couple: getVal('catimg_eye_couple'),
 
     // Sunglasses
     sun_men: getVal('catimg_sun_men'),
     sun_women: getVal('catimg_sun_women'),
     sun_kids: getVal('catimg_sun_kids'),
-    sun_unisex: getVal('catimg_sun_unisex') || getVal('catimg_sun_essentials'),
+    sun_unisex: getVal('catimg_sun_unisex'),
     sun_couple: getVal('catimg_sun_couple'),
     sun_clipon: getVal('catimg_sun_clipon'),
     sun_sports: getVal('catimg_sun_sports')

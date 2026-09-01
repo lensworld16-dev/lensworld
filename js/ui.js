@@ -158,7 +158,7 @@ export const UI = {
         </div>
       </section>
 
-      <!-- 1. Eyeglasses Section (4 Demographic Cards + 4 Featured Products) -->
+      <!-- 1. Eyeglasses Section (5 Demographic Cards + 4 Featured Products) -->
       <section class="demographic-section" style="padding-bottom: 2rem;">
         <div class="container">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
@@ -168,7 +168,7 @@ export const UI = {
             </a>
           </div>
           
-          <div class="demographic-grid">
+          <div class="demographic-grid demographic-grid-eyeglasses">
             <a href="#shop?category=eyeglasses&gender=men" class="demo-card">
               <div class="demo-thumb-box contain-img">
                 <img src="${store.getCatImg('eye_men', 'https://chashmah.com/wp-content/uploads/2026/08/1001073265_768x768.webp')}" alt="Men Eyeglasses" />
@@ -192,9 +192,16 @@ export const UI = {
 
             <a href="#shop?category=eyeglasses&gender=unisex" class="demo-card">
               <div class="demo-thumb-box contain-img">
-                <img src="${store.getCatImg('eye_unisex', 'https://images.unsplash.com/photo-1591076482161-42ce6da69f67?auto=format&fit=crop&w=768&q=80')}" alt="Unisex Eyeglasses" />
+                <img src="${store.getCatImg('eye_unisex', 'images/unisex_eyewear_model.jpg')}" alt="Unisex Eyeglasses" />
               </div>
               <span class="demo-label">Unisex</span>
+            </a>
+
+            <a href="#shop?category=eyeglasses&tag=couple" class="demo-card">
+              <div class="demo-thumb-box contain-img">
+                <img src="${store.getCatImg('eye_couple', 'images/couple_eyewear_model.jpg')}" alt="Couple Eyeglasses" />
+              </div>
+              <span class="demo-label">Couple</span>
             </a>
           </div>
 
@@ -241,21 +248,21 @@ export const UI = {
 
             <a href="#shop?category=sunglasses&gender=unisex" class="demo-card">
               <div class="demo-thumb-box contain-img">
-                <img src="${store.getCatImg('sun_unisex', 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=768&q=80')}" alt="Unisex Sunglasses" />
+                <img src="${store.getCatImg('sun_unisex', 'images/unisex_eyewear_model.jpg')}" alt="Unisex Sunglasses" />
               </div>
               <span class="demo-label">Unisex</span>
             </a>
 
             <a href="#shop?category=sunglasses&tag=couple" class="demo-card">
               <div class="demo-thumb-box contain-img">
-                <img src="${store.getCatImg('sun_couple', 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=768&q=80')}" alt="Couple Sunglasses" />
+                <img src="${store.getCatImg('sun_couple', 'images/couple_eyewear_model.jpg')}" alt="Couple Sunglasses" />
               </div>
               <span class="demo-label">Couple</span>
             </a>
 
             <a href="#shop?category=sunglasses&tag=clip-on" class="demo-card">
               <div class="demo-thumb-box contain-img">
-                <img src="${store.getCatImg('sun_clipon', 'https://images.unsplash.com/photo-1574258495973-f010dfbb5371?auto=format&fit=crop&w=768&q=80')}" alt="Clip-on Sunglasses" />
+                <img src="${store.getCatImg('sun_clipon', 'images/clipon_sunglasses_model.jpg')}" alt="Clip-on Sunglasses" />
               </div>
               <span class="demo-label">Clip-on</span>
             </a>
@@ -400,13 +407,21 @@ export const UI = {
     }
 
     if (gender && gender !== 'all') {
-      filtered = filtered.filter(p => p.gender === gender || (p.cats && p.cats.includes(gender)));
+      filtered = filtered.filter(p => {
+        if (gender === 'couple') {
+          return p.gender === 'couple' || p.gender === 'unisex' || (p.cats && (p.cats.includes('couple') || p.cats.includes('unisex')));
+        }
+        return p.gender === gender || (p.cats && p.cats.includes(gender));
+      });
     }
 
     if (tag && tag !== 'all') {
       const tagLower = tag.toLowerCase();
       filtered = filtered.filter(p => 
         (p.tags && p.tags.some(t => t.toLowerCase().includes(tagLower))) ||
+        (p.cats && p.cats.some(c => c.toLowerCase().includes(tagLower))) ||
+        (p.gender && p.gender.toLowerCase().includes(tagLower)) ||
+        (tagLower === 'couple' && (p.gender === 'unisex' || (p.cats && p.cats.includes('unisex')))) ||
         (p.name && p.name.toLowerCase().includes(tagLower)) ||
         (p.shape && p.shape.toLowerCase().includes(tagLower)) ||
         (p.description && p.description.toLowerCase().includes(tagLower))
@@ -2442,14 +2457,15 @@ export const UI = {
               <!-- Section B: Eyeglasses Demographic Model Photos -->
               <div>
                 <h4 style="color:#000040; font-size:0.95rem; margin-bottom:0.75rem; border-bottom:1px solid #e2e8f0; padding-bottom:0.4rem;">
-                  2. Eyeglasses Demographic Grid (Men, Women, Kids, Unisex)
+                  2. Eyeglasses Demographic Grid (Men, Women, Kids, Unisex, Couple)
                 </h4>
-                <div class="admin-grid-4">
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:1rem;">
                   ${[
                     { id: 'eye_men', label: '👨 Men Eyeglasses' },
                     { id: 'eye_women', label: '👩 Women Eyeglasses' },
                     { id: 'eye_kids', label: '🧒 Kids Eyeglasses' },
-                    { id: 'eye_unisex', label: '👥 Unisex Eyeglasses' }
+                    { id: 'eye_unisex', label: '👥 Unisex Eyeglasses' },
+                    { id: 'eye_couple', label: '💑 Couple Eyeglasses' }
                   ].map(c => `
                     <div class="admin-card-inner" style="background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem; text-align:center;">
                       <label class="admin-lbl" style="font-weight:700; color:#000040; margin-bottom:0.4rem; display:block;">${c.label}</label>
@@ -2544,6 +2560,7 @@ export const UI = {
                     <option value="men">Men</option>
                     <option value="women">Women</option>
                     <option value="kids">Kids</option>
+                    <option value="couple">Couple / Unisex</option>
                   </select>
                 </div>
                 <div>

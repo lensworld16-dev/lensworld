@@ -51,7 +51,13 @@ export const GENDER_CATEGORIES = [
     key: "unisex",
     label: "Unisex",
     subtitle: "Versatile Eyewear for Everyone",
-    img: "https://images.unsplash.com/photo-1591076482161-42ce6da69f67?auto=format&fit=crop&w=600&q=80"
+    img: "/images/unisex_eyewear_model.jpg"
+  },
+  {
+    key: "couple",
+    label: "Couple",
+    subtitle: "Matching & Complementary Pairs for Couples",
+    img: "/images/couple_eyewear_model.jpg"
   }
 ];
 
@@ -69,18 +75,17 @@ export const DEFAULT_CATEGORY_IMAGES = {
   eye_men: "https://chashmah.com/wp-content/uploads/2026/08/1001073265_768x768.webp",
   eye_women: "https://chashmah.com/wp-content/uploads/2026/08/1001073249_cropped_768x768.webp",
   eye_kids: "/images/kids_eyeglasses.png",
-  eye_unisex: "https://images.unsplash.com/photo-1591076482161-42ce6da69f67?auto=format&fit=crop&w=768&q=80",
-  eye_essentials: "/images/essentials_frame.png",
+  eye_unisex: "/images/unisex_eyewear_model.jpg",
+  eye_couple: "/images/couple_eyewear_model.jpg",
 
   // Sunglasses Demographics & Types (Clean Commercial Models)
   sun_men: "https://chashmah.com/wp-content/uploads/2026/08/1001073284_768x768.webp",
   sun_women: "https://chashmah.com/wp-content/uploads/2026/08/1001073289_768x768.webp",
   sun_kids: "/images/kids_sunglasses.png",
-  sun_unisex: "https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=768&q=80",
-  sun_couple: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=768&q=80",
-  sun_clipon: "https://images.unsplash.com/photo-1574258495973-f010dfbb5371?auto=format&fit=crop&w=768&q=80",
+  sun_unisex: "/images/unisex_eyewear_model.jpg",
+  sun_couple: "/images/couple_eyewear_model.jpg",
+  sun_clipon: "/images/clipon_sunglasses_model.jpg",
   sun_sports: "https://images.unsplash.com/photo-1508296695146-257a814070b4?auto=format&fit=crop&w=768&q=80",
-  sun_essentials: "/images/essentials_frame.png",
 
   // Mobile Promo Banners
   banner_new_arrival: "https://chashmah.com/wp-content/uploads/2024/05/IMG20240502181046.webp",
