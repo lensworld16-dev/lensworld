@@ -21,28 +21,55 @@ class Store {
         "lens-s-world-lens-cleaner-kit"
       ]);
       const deletedIds = new Set(JSON.parse(localStorage.getItem("lsw_deleted_products") || "[]"));
-      const initialMap = new Map(INITIAL_PRODUCTS.filter(p => !deletedIds.has(p.id)).map(p => [p.id, p]));
       const saved = localStorage.getItem("lsw_products");
+      
       if (saved) {
         const parsed = JSON.parse(saved);
+        const initialMap = new Map(INITIAL_PRODUCTS.map(p => [p.id, p]));
+        const resultList = [];
+        const seenIds = new Set();
+
+        // 1. Keep all items from saved in their EXACT saved order (newly added products stay at the top!)
         parsed.forEach(p => {
-          if (oldMockIds.has(p.id) || deletedIds.has(p.id)) return; // purge old or deleted products
+          if (!p || !p.id || oldMockIds.has(p.id) || deletedIds.has(p.id) || seenIds.has(p.id)) return;
+          seenIds.add(p.id);
+          const isFeat = p.featured !== undefined ? Boolean(p.featured) : Boolean(p.isFeatured);
           if (initialMap.has(p.id)) {
             const orig = initialMap.get(p.id);
-            initialMap.set(p.id, { 
-              ...orig,         // start with data.js defaults
-              ...p,            // then override with admin-saved values (type, gender, cats, price, mrp, stock, etc.)
+            resultList.push({
+              ...orig,
+              ...p,
               img: p.img || orig.img,
-              gallery: [p.img || orig.img]
+              gallery: (p.gallery && p.gallery.length > 0) ? p.gallery : [p.img || orig.img],
+              featured: isFeat,
+              isFeatured: isFeat,
+              bestSeller: p.bestSeller !== undefined ? Boolean(p.bestSeller) : isFeat
             });
           } else {
-            initialMap.set(p.id, p);
+            resultList.push({
+              ...p,
+              featured: isFeat,
+              isFeatured: isFeat,
+              bestSeller: p.bestSeller !== undefined ? Boolean(p.bestSeller) : isFeat
+            });
           }
         });
+
+        // 2. Append any INITIAL_PRODUCTS that aren't in saved or deleted (e.g. fresh catalog additions in data.js)
+        INITIAL_PRODUCTS.forEach(orig => {
+          if (!seenIds.has(orig.id) && !deletedIds.has(orig.id) && !oldMockIds.has(orig.id)) {
+            seenIds.add(orig.id);
+            resultList.push(orig);
+          }
+        });
+
+        this.products = resultList;
+      } else {
+        this.products = INITIAL_PRODUCTS.filter(p => !deletedIds.has(p.id));
       }
-      this.products = Array.from(initialMap.values());
       this.saveProducts();
-    } catch {
+    } catch (e) {
+      console.warn("Storage restore notice, using base catalog:", e);
       this.products = INITIAL_PRODUCTS;
     }
 
@@ -160,7 +187,18 @@ class Store {
     try {
       localStorage.setItem("lsw_products", JSON.stringify(this.products));
     } catch (e) {
-      console.error(e);
+      console.warn("localStorage quota notice, saving compact products:", e);
+      try {
+        const compact = this.products.map(p => {
+          if (p.img && p.img.length > 250000) {
+            return { ...p, img: 'https://chashmah.com/wp-content/uploads/2026/08/1001073265_768x768.webp', gallery: ['https://chashmah.com/wp-content/uploads/2026/08/1001073265_768x768.webp'] };
+          }
+          return p;
+        });
+        localStorage.setItem("lsw_products", JSON.stringify(compact));
+      } catch (err2) {
+        console.error("Critical storage write failure:", err2);
+      }
     }
   }
 
@@ -470,22 +508,55 @@ class Store {
   updateProduct(productId, updatedFields) {
     const idx = this.products.findIndex(p => p.id === productId);
     if (idx > -1) {
-      this.products[idx] = { ...this.products[idx], ...updatedFields };
+      const current = this.products[idx];
+      const isFeat = updatedFields.featured !== undefined 
+        ? Boolean(updatedFields.featured) 
+        : (updatedFields.isFeatured !== undefined ? Boolean(updatedFields.isFeatured) : Boolean(current.featured || current.isFeatured));
+      
+      const newImg = updatedFields.img || current.img;
+      const newGallery = (updatedFields.gallery && updatedFields.gallery.length > 0) 
+        ? updatedFields.gallery 
+        : (updatedFields.img ? [updatedFields.img] : (current.gallery || [current.img]));
+
+      this.products[idx] = { 
+        ...current, 
+        ...updatedFields,
+        featured: isFeat,
+        isFeatured: isFeat,
+        bestSeller: isFeat,
+        img: newImg,
+        gallery: newGallery
+      };
       this.saveProducts();
       this.showToast("Product updated successfully!", "success");
-      this.notify("products_updated");
+      this.notify("products_updated", this.products[idx]);
     }
   }
 
   addProduct(newProduct) {
+    const timestamp = Date.now();
+    const isFeat = Boolean(newProduct.featured || newProduct.isFeatured);
+    const prodImg = newProduct.img || 'https://chashmah.com/wp-content/uploads/2026/08/1001073265_768x768.webp';
+    const prodGallery = (newProduct.gallery && newProduct.gallery.length > 0) ? newProduct.gallery : [prodImg];
+
     const productWithId = {
       ...newProduct,
-      id: `lens-s-world-${(newProduct.name || 'custom').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`
+      id: newProduct.id || `lens-s-world-${(newProduct.name || 'custom').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${timestamp}`,
+      createdAt: timestamp,
+      img: prodImg,
+      gallery: prodGallery,
+      featured: isFeat,
+      isFeatured: isFeat,
+      bestSeller: isFeat,
+      isNew: newProduct.isNew !== false,
+      inStock: newProduct.inStock !== false,
+      rating: Number(newProduct.rating) || 4.9,
+      reviews: Number(newProduct.reviews) || 16
     };
     this.products.unshift(productWithId);
     this.saveProducts();
     this.showToast("New product added to catalog!", "success");
-    this.notify("products_updated");
+    this.notify("products_updated", productWithId);
     return productWithId;
   }
 
@@ -498,7 +569,7 @@ class Store {
     } catch(e) {}
     this.saveProducts();
     this.showToast("Product removed from catalog.", "info");
-    this.notify("products_updated");
+    this.notify("products_updated", { id: productId, deleted: true });
   }
 
   bulkDeleteProducts(productIds) {

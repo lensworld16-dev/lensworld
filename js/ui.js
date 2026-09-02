@@ -78,16 +78,46 @@ export const UI = {
   // Render Home Page
   renderHomePage() {
     const getFeaturedItems = (catType, limit = 4) => {
-      const allInCat = store.products.filter(p => p.type === catType);
-      const featured = allInCat.filter(p => p.isFeatured === true || p.featured === true || p.bestSeller === true);
-      const nonFeatured = allInCat.filter(p => !p.isFeatured && !p.featured && !p.bestSeller);
-      const combined = [...featured, ...nonFeatured];
-      return combined.slice(0, limit);
+      const allInCat = store.products.filter(p => p.type === catType || (p.cats && p.cats.includes(catType)));
+      const sorted = [...allInCat].sort((a, b) => {
+        const aTime = a.createdAt || (a.id && a.id.startsWith('lens-s-world-') && a.id.split('-').pop()) || 0;
+        const bTime = b.createdAt || (b.id && b.id.startsWith('lens-s-world-') && b.id.split('-').pop()) || 0;
+        if (aTime && bTime && aTime !== bTime) return Number(bTime) - Number(aTime);
+        const aFeat = Boolean(a.isFeatured || a.featured || a.bestSeller);
+        const bFeat = Boolean(b.isFeatured || b.featured || b.bestSeller);
+        if (aFeat && !bFeat) return -1;
+        if (!aFeat && bFeat) return 1;
+        return 0;
+      });
+      return sorted.slice(0, limit);
     };
+
+    const getRecentAndFeatured = (limit = 12) => {
+      return [...store.products].sort((a, b) => {
+        const aTime = a.createdAt || (a.id && a.id.startsWith('lens-s-world-') && a.id.split('-').pop()) || 0;
+        const bTime = b.createdAt || (b.id && b.id.startsWith('lens-s-world-') && b.id.split('-').pop()) || 0;
+        if (aTime && bTime && aTime !== bTime) return Number(bTime) - Number(aTime);
+        const aNew = Boolean(a.isNew || (a.badge && a.badge.toLowerCase().includes('new')));
+        const bNew = Boolean(b.isNew || (b.badge && b.badge.toLowerCase().includes('new')));
+        if (aNew && !bNew) return -1;
+        if (!aNew && bNew) return 1;
+        const aFeat = Boolean(a.isFeatured || a.featured || a.bestSeller);
+        const bFeat = Boolean(b.isFeatured || b.featured || b.bestSeller);
+        if (aFeat && !bFeat) return -1;
+        if (!aFeat && bFeat) return 1;
+        return 0;
+      }).slice(0, limit);
+    };
+
+    const recentAndFeatured = getRecentAndFeatured(12);
+    window.__recentAndFeaturedProds = recentAndFeatured;
 
     const featuredEyeglasses = getFeaturedItems('eyeglasses', 4);
     const featuredSunglasses = getFeaturedItems('sunglasses', 4);
     const featuredReaders = getFeaturedItems('reading-glasses', 4);
+    const featuredPowerSpecs = getFeaturedItems('power-specs', 4);
+    const featuredContacts = getFeaturedItems('contact-lenses', 4);
+    const featuredAccessories = getFeaturedItems('accessories', 4);
 
     return `
       <!-- Top Story Circles Carousel (Exact Categories: Eyeglasses, Sunglasses, Power Specs, Contact Lens, Readers, Lens, Accessories) -->
@@ -146,14 +176,48 @@ export const UI = {
 
           <!-- 2-Column Mobile Featured Banner Cards (Real Indian Eyewear Campaign Models) -->
           <div class="mobile-featured-banners">
-            <a href="#shop" class="mobile-banner-card">
+            <a href="#shop?tag=new" class="mobile-banner-card">
               <img src="${store.getCatImg('banner_new_arrival', 'https://chashmah.com/wp-content/uploads/2024/05/IMG20240502181046.webp')}" alt="New Arrival" />
               <div class="banner-label">New Arrival</div>
             </a>
-            <a href="#shop" class="mobile-banner-card">
+            <a href="#shop?tag=trending" class="mobile-banner-card">
               <img src="${store.getCatImg('banner_trending', 'https://chashmah.com/wp-content/uploads/2024/05/IMG20240514142320.webp')}" alt="Trending Styles" />
               <div class="banner-label">Trending Styles</div>
             </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- ✨ New Arrivals & Trending Eyewear Showcase (Newly Added Products Appear Right Here!) -->
+      <section class="featured-showcase-section">
+        <div class="container">
+          <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:0.85rem; flex-wrap:wrap; gap:0.5rem;">
+            <div>
+              <span style="font-size:0.75rem; font-weight:800; color:#dc2626; text-transform:uppercase; letter-spacing:0.06em; display:inline-flex; align-items:center; gap:0.35rem;">
+                <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#dc2626;"></span>
+                Fresh Drops & Latest Additions
+              </span>
+              <h2 style="font-size:1.4rem; font-weight:800; color:#000040; margin:0.2rem 0 0;">✨ New Arrivals & Trending Eyewear</h2>
+            </div>
+            <a href="#shop?tag=new" style="font-size:0.82rem; font-weight:700; color:#000040; text-decoration:none; background:#ffffff; border:1px solid #cbd5e1; padding:0.35rem 0.75rem; border-radius:6px;">
+              View All New (${recentAndFeatured.length}) →
+            </a>
+          </div>
+
+          <!-- Interactive Category Filter Tabs -->
+          <div class="home-filter-tabs">
+            <button type="button" class="home-tab-chip active" onclick="window.filterHomeShowcase('all', this)">All Eyewear (${recentAndFeatured.length})</button>
+            <button type="button" class="home-tab-chip" onclick="window.filterHomeShowcase('eyeglasses', this)">Eyeglasses (${recentAndFeatured.filter(p => p.type === 'eyeglasses').length})</button>
+            <button type="button" class="home-tab-chip" onclick="window.filterHomeShowcase('sunglasses', this)">Sunglasses (${recentAndFeatured.filter(p => p.type === 'sunglasses').length})</button>
+            <button type="button" class="home-tab-chip" onclick="window.filterHomeShowcase('reading-glasses', this)">Readers (${recentAndFeatured.filter(p => p.type === 'reading-glasses').length})</button>
+            ${recentAndFeatured.some(p => p.type === 'power-specs') ? `<button type="button" class="home-tab-chip" onclick="window.filterHomeShowcase('power-specs', this)">Power Specs (${recentAndFeatured.filter(p => p.type === 'power-specs').length})</button>` : ''}
+            ${recentAndFeatured.some(p => p.type === 'contact-lenses') ? `<button type="button" class="home-tab-chip" onclick="window.filterHomeShowcase('contact-lenses', this)">Contact Lens (${recentAndFeatured.filter(p => p.type === 'contact-lenses').length})</button>` : ''}
+            ${recentAndFeatured.some(p => p.type === 'accessories') ? `<button type="button" class="home-tab-chip" onclick="window.filterHomeShowcase('accessories', this)">Accessories (${recentAndFeatured.filter(p => p.type === 'accessories').length})</button>` : ''}
+          </div>
+
+          <!-- Product Cards Grid -->
+          <div class="products-grid" id="home-showcase-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:1.25rem;">
+            ${recentAndFeatured.slice(0, 8).map(p => this.renderProductCard(p)).join('')}
           </div>
         </div>
       </section>
@@ -293,7 +357,7 @@ export const UI = {
               <h2 style="font-size:1.4rem; font-weight:800; color:#000040; margin:0;">Reading Glasses Collection</h2>
             </div>
             <a href="#shop?category=reading-glasses" style="font-size:0.82rem; font-weight:700; color:#000040; text-decoration:none; display:flex; align-items:center; gap:0.25rem;">
-              View All Readers (30) →
+              View All Readers (${store.products.filter(p => p.type === 'reading-glasses').length}) →
             </a>
           </div>
           <div class="products-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:1.25rem;">
@@ -301,6 +365,46 @@ export const UI = {
           </div>
         </div>
       </section>
+
+      ${featuredPowerSpecs.length > 0 ? `
+        <!-- Power Specs Showcase Section -->
+        <section class="demographic-section" style="padding: 1.5rem 0 2rem 0; border-top: 1px solid #f1f5f9;">
+          <div class="container">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+              <div>
+                <span style="font-size:0.72rem; font-weight:800; color:#2563eb; text-transform:uppercase; letter-spacing:0.05em; display:block; margin-bottom:0.25rem;">Screen Protection & Prescriptions</span>
+                <h2 class="demographic-header" style="margin:0;">Power Specs & Blue Light Glasses</h2>
+              </div>
+              <a href="#shop?category=power-specs" style="font-size:0.82rem; font-weight:700; color:#000040; text-decoration:none; display:flex; align-items:center; gap:0.25rem;">
+                View All (${store.products.filter(p => p.type === 'power-specs').length}) →
+              </a>
+            </div>
+            <div class="products-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:1.25rem;">
+              ${featuredPowerSpecs.map(p => this.renderProductCard(p)).join('')}
+            </div>
+          </div>
+        </section>
+      ` : ''}
+
+      ${featuredAccessories.length > 0 ? `
+        <!-- Accessories Showcase Section -->
+        <section class="demographic-section" style="padding: 1.5rem 0 2rem 0; border-top: 1px solid #f1f5f9;">
+          <div class="container">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+              <div>
+                <span style="font-size:0.72rem; font-weight:800; color:#059669; text-transform:uppercase; letter-spacing:0.05em; display:block; margin-bottom:0.25rem;">Maintenance & Optical Essentials</span>
+                <h2 class="demographic-header" style="margin:0;">Eyewear Accessories & Care</h2>
+              </div>
+              <a href="#shop?category=accessories" style="font-size:0.82rem; font-weight:700; color:#000040; text-decoration:none; display:flex; align-items:center; gap:0.25rem;">
+                View All (${store.products.filter(p => p.type === 'accessories').length}) →
+              </a>
+            </div>
+            <div class="products-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:1.25rem;">
+              ${featuredAccessories.map(p => this.renderProductCard(p)).join('')}
+            </div>
+          </div>
+        </section>
+      ` : ''}
 
       <!-- Lens Guide Highlight Section (Ultra-Sleek & Space Efficient on Mobile) -->
       <section class="lens-guide-section">
@@ -418,6 +522,8 @@ export const UI = {
     if (tag && tag !== 'all') {
       const tagLower = tag.toLowerCase();
       filtered = filtered.filter(p => 
+        (tagLower === 'new' && (p.isNew === true || (p.badge && p.badge.toLowerCase().includes('new')))) ||
+        (tagLower === 'trending' && (p.isTrending === true || p.trending === true || (p.badge && p.badge.toLowerCase().includes('trend')))) ||
         (p.tags && p.tags.some(t => t.toLowerCase().includes(tagLower))) ||
         (p.cats && p.cats.some(c => c.toLowerCase().includes(tagLower))) ||
         (p.gender && p.gender.toLowerCase().includes(tagLower)) ||

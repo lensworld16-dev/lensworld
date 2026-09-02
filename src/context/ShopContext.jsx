@@ -143,22 +143,23 @@ export function ShopProvider({ children }) {
   // Products state (synchronized with PRODUCTS_DATA, custom added products and admin edits)
   const [products, setProducts] = useState(() => {
     try {
+      const deletedIds = new Set(JSON.parse(localStorage.getItem("lsw_deleted_products") || "[]"));
       const saved = localStorage.getItem("lsw_products");
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           const baseProductIds = new Set(PRODUCTS_DATA.map(p => p.id));
           // Custom products added by admin
-          const customProducts = parsed.filter(p => p && p.id && !baseProductIds.has(p.id));
+          const customProducts = parsed.filter(p => p && p.id && !baseProductIds.has(p.id) && !deletedIds.has(p.id));
           // Merge base products with any edits in localStorage
-          const mergedBase = PRODUCTS_DATA.map(baseProd => {
+          const mergedBase = PRODUCTS_DATA.filter(p => !deletedIds.has(p.id)).map(baseProd => {
             const match = parsed.find(p => p && p.id === baseProd.id);
             return match ? { ...baseProd, ...match } : baseProd;
           });
           return [...customProducts, ...mergedBase];
         }
       }
-      return PRODUCTS_DATA;
+      return PRODUCTS_DATA.filter(p => !deletedIds.has(p.id));
     } catch {
       return PRODUCTS_DATA;
     }
@@ -710,6 +711,11 @@ export function ShopProvider({ children }) {
 
   const deleteProduct = async (productId) => {
     setProducts(prev => prev.filter(p => p.id !== productId));
+    try {
+      const deleted = new Set(JSON.parse(localStorage.getItem("lsw_deleted_products") || "[]"));
+      deleted.add(productId);
+      localStorage.setItem("lsw_deleted_products", JSON.stringify(Array.from(deleted)));
+    } catch (e) {}
     showToast("Product deleted from catalog", "info");
 
     if (supabase) {

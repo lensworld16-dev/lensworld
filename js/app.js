@@ -1,7 +1,7 @@
 // LENS S WORLD - Main Application Controller
 import { store } from './store.js';
 import { UI } from './ui.js';
-import { initRouter } from './router.js';
+import { initRouter, handleRoute } from './router.js';
 import { LENS_PACKAGES, CONTACT_LENS_DISPOSAL_TYPES, PRESCRIPTION_POWER_OPTIONS } from './data.js';
 import { sendOrderEmail, sendContactInquiryEmail } from './emailService.js';
 
@@ -936,6 +936,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const mainApp = document.getElementById('app-main');
         if (mainApp) mainApp.innerHTML = UI.renderWishlistPage();
       }
+    } else if (event === 'products_updated') {
+      const hash = window.location.hash || '';
+      if (!hash.startsWith('#admin')) {
+        handleRoute();
+      }
     }
   });
 
@@ -1247,13 +1252,42 @@ window.previewProductImageUpload = function(event) {
 
   const reader = new FileReader();
   reader.onload = function(e) {
-    const dataUrl = e.target.result;
-    document.getElementById('p-img').value = dataUrl;
-    const previewImg = document.getElementById('p-preview-thumb');
-    const previewText = document.getElementById('p-preview-text');
-    previewImg.src = dataUrl;
-    previewImg.style.display = 'block';
-    previewText.style.display = 'none';
+    const rawDataUrl = e.target.result;
+    // Auto-compress large photos via HTML5 Canvas to prevent localStorage quota crash
+    const img = new Image();
+    img.onload = function() {
+      const maxDim = 800;
+      let width = img.width;
+      let height = img.height;
+      if (width > height) {
+        if (width > maxDim) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        }
+      } else {
+        if (height > maxDim) {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+
+      document.getElementById('p-img').value = compressedDataUrl;
+      const previewImg = document.getElementById('p-preview-thumb');
+      const previewText = document.getElementById('p-preview-text');
+      previewImg.src = compressedDataUrl;
+      previewImg.style.display = 'block';
+      previewText.style.display = 'none';
+    };
+    img.onerror = function() {
+      document.getElementById('p-img').value = rawDataUrl;
+    };
+    img.src = rawDataUrl;
   };
   reader.readAsDataURL(file);
 };
@@ -1263,27 +1297,27 @@ window.saveProductForm = function(event) {
 
   const editId = document.getElementById('p-edit-id').value;
   const name = document.getElementById('p-name').value.trim();
-  const sku = document.getElementById('p-sku').value.trim();
+  const sku = document.getElementById('p-sku').value.trim() || `LSW-${Math.floor(100 + Math.random() * 900)}`;
   const type = document.getElementById('p-type').value;
   const gender = document.getElementById('p-gender').value;
   const badge = document.getElementById('p-badge').value.trim();
   const price = parseFloat(document.getElementById('p-price').value);
-  const mrp = parseFloat(document.getElementById('p-mrp').value) || (price * 1.5);
+  const mrp = parseFloat(document.getElementById('p-mrp').value) || Math.round(price * 1.6);
   const img = document.getElementById('p-img').value.trim() || 'https://chashmah.com/wp-content/uploads/2026/08/1001073265_768x768.webp';
   const featured = document.getElementById('p-featured')?.checked !== false;
   const isNew = document.getElementById('p-is-new')?.checked === true;
   const isTrending = document.getElementById('p-is-trending')?.checked === true;
-  const lensOptionsAvailable = document.getElementById('p-rx-enabled').checked;
-  const inStock = document.getElementById('p-instock').checked;
+  const lensOptionsAvailable = document.getElementById('p-rx-enabled')?.checked !== false;
+  const inStock = document.getElementById('p-instock')?.checked !== false;
   
   const lensWidth = document.getElementById('p-lens-width')?.value.trim() || '50';
   const bridgeWidth = document.getElementById('p-bridge-width')?.value.trim() || '20';
   const templeLength = document.getElementById('p-temple-length')?.value.trim() || '142';
   const size = `${lensWidth}-${bridgeWidth}-${templeLength}`;
   
-  const shape = document.getElementById('p-shape').value.trim() || 'Rectangle';
-  const weight = document.getElementById('p-weight').value.trim() || '17g';
-  const description = document.getElementById('p-desc').value.trim();
+  const shape = document.getElementById('p-shape')?.value.trim() || 'Rectangle';
+  const weight = document.getElementById('p-weight')?.value.trim() || '17g';
+  const description = document.getElementById('p-desc')?.value.trim() || `${name} handcrafted with optical precision from LENS S WORLD.`;
 
   // Handle Color Variants
   const hasVariants = document.getElementById('p-has-color-variants')?.checked !== false;
@@ -1298,10 +1332,13 @@ window.saveProductForm = function(event) {
     name,
     sku,
     type,
+    category: type,
     gender,
     cats: gender === 'unisex' ? ['men', 'women', 'unisex'] : [gender],
     badge: badge || (isNew ? 'New' : (isTrending ? 'Trending' : '')),
     featured,
+    isFeatured: featured,
+    bestSeller: featured,
     isNew,
     isTrending,
     trending: isTrending,
@@ -1310,6 +1347,8 @@ window.saveProductForm = function(event) {
     img,
     gallery: [img],
     lensOptionsAvailable,
+    prescriptionAvailable: lensOptionsAvailable,
+    frameOnlyAvailable: true,
     inStock,
     color,
     colors: colors.length > 0 ? colors : [color],
@@ -1329,6 +1368,20 @@ window.saveProductForm = function(event) {
   document.getElementById('admin-product-modal').style.display = 'none';
   const mainApp = document.getElementById('app-main');
   if (mainApp) mainApp.innerHTML = UI.renderAdminDashboard('products');
+};
+
+window.filterHomeShowcase = function(cat, btn) {
+  document.querySelectorAll('.home-tab-chip').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const grid = document.getElementById('home-showcase-grid');
+  if (!grid) return;
+  const prods = window.__recentAndFeaturedProds || [];
+  const filtered = cat === 'all' ? prods : prods.filter(p => p.type === cat || (p.cats && p.cats.includes(cat)));
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div style="grid-column:1/-1; padding:2.5rem 1rem; text-align:center; color:#64748b; font-size:0.85rem; background:#ffffff; border-radius:10px; border:1px dashed #cbd5e1;">No products found in this category yet.</div>`;
+  } else {
+    grid.innerHTML = filtered.slice(0, 8).map(p => UI.renderProductCard(p)).join('');
+  }
 };
 
 window.deleteProductAdmin = function(productId) {
