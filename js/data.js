@@ -3963,6 +3963,42 @@ export const INITIAL_PRODUCTS = [
     frameOnlyAvailable: false,
     prescriptionAvailable: true,
     lensOptionsAvailable: false
+  },
+  {
+    id: "lens-s-world-microfiber-cleaning-cloth",
+    name: "LENS S WORLD Ultra-Soft Microfiber Eyeglass Cleaning Cloth",
+    type: "accessories",
+    gender: "unisex",
+    shape: "Square",
+    img: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=800&q=80",
+    gallery: [
+      "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=800&q=80"
+    ],
+    color: "Sky Blue",
+    colors: ["Sky Blue", "Slate Grey", "Classic Black"],
+    material: "Premium High-Density Microfiber",
+    price: 10,
+    mrp: 49,
+    brand: "LENS S WORLD",
+    cats: ["men", "women", "kids", "accessories"],
+    sku: "LSW-ACC-010",
+    stock: 500,
+    rating: 4.9,
+    reviews: 184,
+    isNew: true,
+    bestSeller: true,
+    size: "15cm x 15cm",
+    weight: "8g",
+    description: "Ultra-fine lint-free microfiber cloth for crystal-clear, scratch-free lens and screen cleaning. Specially formulated for anti-reflective and blue-cut optical lenses.",
+    features: [
+      "Zero-Scratch Optical Grade Fiber",
+      "Absorbs Fingerprints, Oils & Smudges Instantly",
+      "Reusable & Machine Washable",
+      "100% Safe for Blue-Cut & Polarized Lenses"
+    ],
+    frameOnlyAvailable: false,
+    prescriptionAvailable: false,
+    lensOptionsAvailable: false
   }
 ];
 

@@ -192,14 +192,14 @@ export const UI = {
 
             <a href="#shop?category=eyeglasses&gender=unisex" class="demo-card">
               <div class="demo-thumb-box contain-img">
-                <img src="${store.getCatImg('eye_unisex', 'images/unisex_eyewear_model.jpg')}" alt="Unisex Eyeglasses" />
+                <img src="${store.getCatImg('eye_unisex', 'images/unisex_eyewear_model.jpg')}" alt="Unisex Eyeglasses" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=768&q=80';" />
               </div>
               <span class="demo-label">Unisex</span>
             </a>
 
             <a href="#shop?category=eyeglasses&tag=couple" class="demo-card">
               <div class="demo-thumb-box contain-img">
-                <img src="${store.getCatImg('eye_couple', 'images/couple_eyewear_model.jpg')}" alt="Couple Eyeglasses" />
+                <img src="${store.getCatImg('eye_couple', 'images/couple_eyewear_model.jpg')}" alt="Couple Eyeglasses" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=768&q=80';" />
               </div>
               <span class="demo-label">Couple</span>
             </a>
@@ -227,49 +227,49 @@ export const UI = {
           <div class="demographic-grid demographic-grid-sunglasses">
             <a href="#shop?category=sunglasses&gender=men" class="demo-card">
               <div class="demo-thumb-box contain-img">
-                <img src="${store.getCatImg('sun_men', 'https://chashmah.com/wp-content/uploads/2026/08/1001073284_768x768.webp')}" alt="Men Sunglasses" />
+                <img src="${store.getCatImg('sun_men', 'https://chashmah.com/wp-content/uploads/2026/08/1001073284_768x768.webp')}" alt="Men Sunglasses" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80';" />
               </div>
               <span class="demo-label">Men</span>
             </a>
 
             <a href="#shop?category=sunglasses&gender=women" class="demo-card">
               <div class="demo-thumb-box contain-img">
-                <img src="${store.getCatImg('sun_women', 'https://chashmah.com/wp-content/uploads/2026/08/1001073289_768x768.webp')}" alt="Women Sunglasses" />
+                <img src="${store.getCatImg('sun_women', 'https://chashmah.com/wp-content/uploads/2026/08/1001073289_768x768.webp')}" alt="Women Sunglasses" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80';" />
               </div>
               <span class="demo-label">Women</span>
             </a>
 
             <a href="#shop?category=sunglasses&gender=kids" class="demo-card">
               <div class="demo-thumb-box">
-                <img src="${store.getCatImg('sun_kids', 'images/kids_sunglasses.png')}" alt="Kids Sunglasses" />
+                <img src="${store.getCatImg('sun_kids', 'images/kids_sunglasses.png')}" alt="Kids Sunglasses" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1543332164-6e82f355badc?auto=format&fit=crop&w=600&q=80';" />
               </div>
               <span class="demo-label">Kids</span>
             </a>
 
             <a href="#shop?category=sunglasses&gender=unisex" class="demo-card">
               <div class="demo-thumb-box contain-img">
-                <img src="${store.getCatImg('sun_unisex', 'images/unisex_eyewear_model.jpg')}" alt="Unisex Sunglasses" />
+                <img src="${store.getCatImg('sun_unisex', 'images/unisex_eyewear_model.jpg')}" alt="Unisex Sunglasses" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=768&q=80';" />
               </div>
               <span class="demo-label">Unisex</span>
             </a>
 
             <a href="#shop?category=sunglasses&tag=couple" class="demo-card">
               <div class="demo-thumb-box contain-img">
-                <img src="${store.getCatImg('sun_couple', 'images/couple_eyewear_model.jpg')}" alt="Couple Sunglasses" />
+                <img src="${store.getCatImg('sun_couple', 'images/couple_eyewear_model.jpg')}" alt="Couple Sunglasses" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=768&q=80';" />
               </div>
               <span class="demo-label">Couple</span>
             </a>
 
             <a href="#shop?category=sunglasses&tag=clip-on" class="demo-card">
               <div class="demo-thumb-box contain-img">
-                <img src="${store.getCatImg('sun_clipon', 'images/clipon_sunglasses_model.jpg')}" alt="Clip-on Sunglasses" />
+                <img src="${store.getCatImg('sun_clipon', 'images/clipon_sunglasses_model.jpg')}" alt="Clip-on Sunglasses" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&w=768&q=80';" />
               </div>
               <span class="demo-label">Clip-on</span>
             </a>
 
             <a href="#shop?category=sunglasses&tag=sports" class="demo-card">
               <div class="demo-thumb-box contain-img">
-                <img src="${store.getCatImg('sun_sports', 'https://images.unsplash.com/photo-1508296695146-257a814070b4?auto=format&fit=crop&w=768&q=80')}" alt="Sports Sunglasses" />
+                <img src="${store.getCatImg('sun_sports', 'https://images.unsplash.com/photo-1508296695146-257a814070b4?auto=format&fit=crop&w=768&q=80')}" alt="Sports Sunglasses" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1508296695146-257a814070b4?auto=format&fit=crop&w=768&q=80';" />
               </div>
               <span class="demo-label">Sports</span>
             </a>
@@ -402,7 +402,7 @@ export const UI = {
       } else if (category === 'reading-glasses') {
         filtered = filtered.filter(p => p.type === 'reading-glasses' || p.type === 'power-specs');
       } else {
-        filtered = filtered.filter(p => p.type === category);
+        filtered = filtered.filter(p => p.type === category || p.category === category || (p.cats && p.cats.includes(category)));
       }
     }
 
