@@ -741,7 +741,29 @@ window.AppEvents = {
     UI.openCartDrawer();
   },
 
-  handleCheckoutSubmit(event) {
+  handlePaymentModeChange(event) {
+    const selectedMode = document.querySelector('input[name="payment-mode"]:checked')?.value || 'UPI';
+    document.querySelectorAll('.payment-method-card').forEach(card => {
+      const radio = card.querySelector('input[type="radio"]');
+      if (radio && radio.checked) {
+        card.classList.add('active');
+      } else {
+        card.classList.remove('active');
+      }
+    });
+
+    const submitBtn = document.getElementById('checkout-submit-btn');
+    if (submitBtn) {
+      const totals = store.getTotals();
+      if (selectedMode === 'Cash on Delivery') {
+        submitBtn.innerHTML = `<span>Place COD Order (${UI.formatPrice(totals.grandTotal)}) →</span>`;
+      } else {
+        submitBtn.innerHTML = `<span>Pay ${UI.formatPrice(totals.grandTotal)} with Cashfree →</span>`;
+      }
+    }
+  },
+
+  async handleCheckoutSubmit(event) {
     event.preventDefault();
 
     const name = document.getElementById('cust-name')?.value || 'Customer';
@@ -752,17 +774,144 @@ window.AppEvents = {
     const pincode = document.getElementById('cust-pincode')?.value || '';
     const paymentMode = document.querySelector('input[name="payment-mode"]:checked')?.value || 'UPI';
 
-    const newOrder = store.placeOrder({
-      customer: { name, phone, email, address, city, pincode },
-      paymentMethod: paymentMode
-    });
+    const submitBtn = document.getElementById('checkout-submit-btn');
+    const statusMsg = document.getElementById('checkout-status-msg');
 
-    // Asynchronously send live email notification via EmailJS
-    sendOrderEmail(newOrder).then(sent => {
-      if (sent) console.log("✓ Live EmailJS Order confirmation sent!");
-    }).catch(e => console.warn("Email notification error", e));
+    const totals = store.getTotals();
 
-    window.location.hash = `#order-success?id=${newOrder.id}`;
+    // 1. If Cash on Delivery, place order directly
+    if (paymentMode === 'Cash on Delivery') {
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span>Placing COD Order...</span>';
+      }
+      const newOrder = store.placeOrder({
+        customer: { name, phone, email, address, city, pincode },
+        paymentMethod: 'Cash on Delivery',
+        paymentStatus: 'Pending'
+      });
+
+      // Asynchronously send live email notification via EmailJS
+      sendOrderEmail(newOrder).then(sent => {
+        if (sent) console.log("✓ Live EmailJS Order confirmation sent!");
+      }).catch(e => console.warn("Email notification error", e));
+
+      window.location.hash = `#order-success?id=${newOrder.id}`;
+      return;
+    }
+
+    // 2. Online Payment (Cashfree UPI / Cards / NetBanking)
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>Connecting to Cashfree...</span>';
+    }
+    if (statusMsg) {
+      statusMsg.style.display = 'block';
+      statusMsg.style.color = '#0f766e';
+      statusMsg.style.background = '#f0fdfa';
+      statusMsg.textContent = 'Initiating secure Cashfree checkout session...';
+    }
+
+    try {
+      const tempOrderId = `LSW_${Date.now()}`;
+      const res = await fetch('/api/create-cashfree-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: tempOrderId,
+          orderAmount: totals.grandTotal,
+          customerName: name,
+          customerPhone: phone,
+          customerEmail: email
+        })
+      });
+
+      const orderData = await res.json();
+      if (!res.ok || !orderData.paymentSessionId) {
+        throw new Error(orderData.error || 'Failed to initialize Cashfree payment');
+      }
+
+      if (statusMsg) statusMsg.textContent = 'Opening Cashfree Payment Modal...';
+
+      // Check for Cashfree SDK
+      if (!window.Cashfree) {
+        throw new Error('Cashfree SDK is loading. Please check your internet connection.');
+      }
+
+      const cashfreeMode = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_CASHFREE_MODE) || 'production';
+      const cashfree = window.Cashfree({
+        mode: cashfreeMode // 'production' for live payments
+      });
+
+      const checkoutOptions = {
+        paymentSessionId: orderData.paymentSessionId,
+        redirectTarget: '_modal'
+      };
+
+      cashfree.checkout(checkoutOptions).then((result) => {
+        if (result.error) {
+          console.warn('Cashfree payment modal error/cancelled:', result.error);
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<span>Pay & Place Order →</span>';
+          }
+          if (statusMsg) {
+            statusMsg.style.color = '#e11d48';
+            statusMsg.style.background = '#ffe4e6';
+            statusMsg.textContent = result.error.message || 'Payment was cancelled or failed. Please try again.';
+          }
+          return;
+        }
+
+        if (result.paymentDetails) {
+          console.log('Payment Successful:', result.paymentDetails);
+          if (statusMsg) statusMsg.textContent = 'Payment successful! Creating order...';
+
+          const newOrder = store.placeOrder({
+            customer: { name, phone, email, address, city, pincode },
+            paymentMethod: paymentMode === 'Card' ? 'Cashfree Card/Netbanking' : 'Cashfree UPI',
+            paymentStatus: 'Paid',
+            cfOrderId: orderData.orderId,
+            cfPaymentSessionId: orderData.paymentSessionId
+          });
+
+          sendOrderEmail(newOrder).then(sent => {
+            if (sent) console.log("✓ Live EmailJS Order confirmation sent!");
+          }).catch(e => console.warn("Email notification error", e));
+
+          window.location.hash = `#order-success?id=${newOrder.id}`;
+        } else {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<span>Pay & Place Order →</span>';
+          }
+          if (statusMsg) statusMsg.style.display = 'none';
+        }
+      }).catch(err => {
+        console.error('Checkout error:', err);
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<span>Pay & Place Order →</span>';
+        }
+        if (statusMsg) {
+          statusMsg.style.color = '#e11d48';
+          statusMsg.style.background = '#ffe4e6';
+          statusMsg.textContent = err.message || 'Could not complete checkout.';
+        }
+      });
+
+    } catch (err) {
+      console.error('Cashfree error:', err);
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>Pay & Place Order →</span>';
+      }
+      if (statusMsg) {
+        statusMsg.style.color = '#e11d48';
+        statusMsg.style.background = '#ffe4e6';
+        statusMsg.textContent = err.message || 'Payment initiation failed.';
+      }
+    }
   }
 };
 

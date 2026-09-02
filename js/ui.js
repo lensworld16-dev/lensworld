@@ -1456,25 +1456,44 @@ export const UI = {
                 </div>
               </div>
 
-              <!-- Payment Method (Super Simple) -->
+              <!-- Payment Method (Cashfree Gateway & COD) -->
               <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:1.1rem; box-shadow:0 1px 4px rgba(0,0,0,0.03);">
-                <div style="font-size:0.88rem; font-weight:800; color:#000040; margin-bottom:0.65rem; display:flex; align-items:center; gap:0.4rem;">
-                  <span>💳</span> Payment Option
+                <div style="font-size:0.88rem; font-weight:800; color:#000040; margin-bottom:0.65rem; display:flex; align-items:center; justify-content:space-between;">
+                  <div style="display:flex; align-items:center; gap:0.4rem;">
+                    <span>💳</span> Payment Option
+                  </div>
+                  <span style="font-size:0.65rem; font-weight:800; color:#0f766e; background:#ccfbf1; padding:2px 6px; border-radius:4px;">Cashfree Secured</span>
                 </div>
 
-                <div style="display:flex; flex-direction:column; gap:0.5rem;">
-                  <label style="display:flex; align-items:center; justify-content:space-between; padding:0.6rem 0.85rem; border:1.5px solid #000040; border-radius:8px; cursor:pointer; background:#f8fafc; font-size:0.82rem;">
+                <div style="display:flex; flex-direction:column; gap:0.5rem;" onchange="window.AppEvents && window.AppEvents.handlePaymentModeChange(event)">
+                  <label class="payment-method-card active" id="pay-opt-UPI">
                     <div style="display:flex; align-items:center; gap:0.5rem;">
                       <input type="radio" name="payment-mode" value="UPI" checked style="accent-color:#000040;" />
-                      <strong style="color:#000040;">⚡ Instant UPI / GPay / PhonePe / QR</strong>
+                      <div>
+                        <strong style="color:#000040; display:block;">⚡ UPI / QR Code</strong>
+                        <span style="font-size:0.68rem; color:#64748b;">GPay, PhonePe, Paytm, BHIM</span>
+                      </div>
                     </div>
-                    <span style="font-size:0.68rem; color:#059669; font-weight:700; background:#ecfdf5; padding:2px 6px; border-radius:4px;">Fast</span>
+                    <span style="font-size:0.68rem; color:#059669; font-weight:700; background:#ecfdf5; padding:2px 6px; border-radius:4px;">Fastest</span>
                   </label>
 
-                  <label style="display:flex; align-items:center; justify-content:space-between; padding:0.6rem 0.85rem; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer; background:#fff; font-size:0.82rem;">
+                  <label class="payment-method-card" id="pay-opt-Card">
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                      <input type="radio" name="payment-mode" value="Card" style="accent-color:#000040;" />
+                      <div>
+                        <strong style="color:#334155; display:block;">💳 Card & NetBanking</strong>
+                        <span style="font-size:0.68rem; color:#64748b;">Visa, Mastercard, RuPay & Banks</span>
+                      </div>
+                    </div>
+                  </label>
+
+                  <label class="payment-method-card" id="pay-opt-COD">
                     <div style="display:flex; align-items:center; gap:0.5rem;">
                       <input type="radio" name="payment-mode" value="Cash on Delivery" style="accent-color:#000040;" />
-                      <span style="color:#334155; font-weight:600;">💵 Cash on Delivery (COD)</span>
+                      <div>
+                        <strong style="color:#334155; display:block;">💵 Cash on Delivery (COD)</strong>
+                        <span style="font-size:0.68rem; color:#64748b;">Pay when parcel arrives</span>
+                      </div>
                     </div>
                   </label>
                 </div>
@@ -1539,12 +1558,14 @@ export const UI = {
                 </div>
 
                 <!-- Submit Button -->
-                <button type="submit" class="btn btn-navy" style="width:100%; margin-top:0.85rem; height:42px; font-size:0.88rem; font-weight:800; border-radius:8px;">
-                  Confirm & Place Order →
+                <button type="submit" id="checkout-submit-btn" class="btn btn-navy" style="width:100%; margin-top:0.85rem; height:44px; font-size:0.88rem; font-weight:800; border-radius:8px; display:flex; align-items:center; justify-content:center; gap:0.5rem;">
+                  <span>Pay & Place Order →</span>
                 </button>
 
+                <div id="checkout-status-msg" style="display:none; font-size:0.72rem; color:#0f766e; background:#f0fdfa; border:1px solid #ccfbf1; padding:0.4rem; border-radius:6px; margin-top:0.5rem; text-align:center; font-weight:700;"></div>
+
                 <div style="margin-top:0.6rem; text-align:center; font-size:0.68rem; color:#94a3b8;">
-                  🔒 256-Bit SSL Encrypted • Instant Email & WhatsApp
+                  🔒 Secured by Cashfree 256-Bit SSL • RBI Authorized
                 </div>
               </div>
             </div>

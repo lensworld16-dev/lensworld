@@ -10,8 +10,11 @@ import {
   Check, 
   Lock, 
   ArrowLeft, 
-  AlertCircle 
+  AlertCircle,
+  Loader2,
+  Sparkles
 } from 'lucide-react';
+import { load } from '@cashfreepayments/cashfree-js';
 import { useShop } from '../context/ShopContext';
 import { getWhatsAppUrl, STORE_PHONE } from '../utils/whatsappHelper';
 import confetti from 'canvas-confetti';
@@ -41,12 +44,13 @@ export default function CheckoutPage({ setCurrentRoute, setCompletedOrder }) {
     landmark: ''
   });
 
-  const [paymentMethod, setPaymentMethod] = useState('UPI'); // 'UPI' | 'COD' | 'Card' | 'WhatsApp'
+  const [paymentMethod, setPaymentMethod] = useState('UPI'); // 'UPI' | 'COD' | 'Card'
   const [prescriptionMethod, setPrescriptionMethod] = useState('upload'); // 'upload' | 'later'
   const [prescriptionFile, setPrescriptionFile] = useState(null);
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
 
   // Check if any cart item requires prescription
   const hasPrescriptionItems = cart.some(item => item.selectedLens || item.type === 'contact-lenses');
@@ -85,46 +89,138 @@ export default function CheckoutPage({ setCurrentRoute, setCompletedOrder }) {
     return Object.keys(errs).length === 0;
   };
 
-  const handlePlaceOrder = (e) => {
-    e.preventDefault();
+  const finalizeOrder = async (extraOrderData = {}) => {
+    const order = await placeOrder({
+      customer: {
+        name: formData.fullName,
+        phone: formData.phone.startsWith('+91') ? formData.phone : `+91 ${formData.phone}`,
+        email: formData.email,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        pincode: formData.pincode,
+        landmark: formData.landmark
+      },
+      paymentMethod: extraOrderData.paymentMethod || (paymentMethod === 'COD' ? 'Cash on Delivery' : 'Cashfree Online'),
+      paymentStatus: extraOrderData.paymentStatus || (paymentMethod === 'COD' ? 'Pending' : 'Paid'),
+      prescriptionMethod: hasPrescriptionItems ? prescriptionMethod : null,
+      prescriptionFile: prescriptionFile,
+      notes,
+      ...extraOrderData
+    });
+
+    try {
+      confetti({
+        particleCount: 120,
+        spread: 75,
+        origin: { y: 0.6 }
+      });
+    } catch (e) {}
+
+    setIsSubmitting(false);
+    setStatusMessage('');
+    setCompletedOrder(order);
+    setCurrentRoute({ name: 'order-success', orderId: order.id });
+  };
+
+  const handlePlaceOrder = async (e) => {
+    if (e) e.preventDefault();
     if (!validate()) {
       showToast("Please fill all required delivery details.", "error");
       return;
     }
 
-    setIsSubmitting(true);
+    // COD Flow
+    if (paymentMethod === 'COD') {
+      setIsSubmitting(true);
+      setStatusMessage('Placing Cash on Delivery order...');
+      setTimeout(() => {
+        finalizeOrder({
+          paymentMethod: 'Cash on Delivery',
+          paymentStatus: 'Pending'
+        });
+      }, 500);
+      return;
+    }
 
-    setTimeout(() => {
-      const order = placeOrder({
-        customer: {
-          name: formData.fullName,
-          phone: formData.phone.startsWith('+91') ? formData.phone : `+91 ${formData.phone}`,
-          email: formData.email,
-          address: formData.address,
-          city: formData.city,
-          state: formData.state,
-          pincode: formData.pincode,
-          landmark: formData.landmark
-        },
-        paymentMethod: paymentMethod === 'COD' ? 'Cash on Delivery' : paymentMethod,
-        prescriptionMethod: hasPrescriptionItems ? prescriptionMethod : null,
-        prescriptionFile: prescriptionFile,
-        notes
+    // Cashfree Online Payment Flow (UPI / Cards / NetBanking)
+    setIsSubmitting(true);
+    setStatusMessage('Connecting to Cashfree Payments...');
+
+    try {
+      // 1. Create Cashfree Order on Server
+      const tempOrderId = `LSW_${Date.now()}`;
+      const res = await fetch('/api/create-cashfree-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: tempOrderId,
+          orderAmount: grandTotal,
+          customerName: formData.fullName,
+          customerPhone: formData.phone,
+          customerEmail: formData.email
+        })
       });
 
-      // Confetti burst
-      try {
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 }
-        });
-      } catch (e) {}
+      const orderData = await res.json();
 
+      if (!res.ok || !orderData.paymentSessionId) {
+        throw new Error(orderData.error || 'Failed to initialize Cashfree payment session');
+      }
+
+      setStatusMessage('Opening Cashfree Payment Gateway...');
+
+      // 2. Load Cashfree JS SDK
+      const cashfreeMode = import.meta.env.VITE_CASHFREE_MODE || 'sandbox';
+      const cashfree = await load({
+        mode: cashfreeMode
+      });
+
+      // 3. Launch Checkout Modal
+      const checkoutOptions = {
+        paymentSessionId: orderData.paymentSessionId,
+        redirectTarget: '_modal'
+      };
+
+      cashfree.checkout(checkoutOptions).then(async (result) => {
+        if (result.error) {
+          console.warn('Cashfree payment error/closed:', result.error);
+          setIsSubmitting(false);
+          setStatusMessage('');
+          showToast(result.error.message || 'Payment was cancelled or failed. Please try again.', 'error');
+          return;
+        }
+
+        if (result.paymentDetails) {
+          console.log('Cashfree paymentDetails:', result.paymentDetails);
+          setStatusMessage('Verifying payment confirmation...');
+
+          // Finalize order in state and DB
+          await finalizeOrder({
+            paymentMethod: paymentMethod === 'UPI' ? 'Cashfree UPI' : 'Cashfree Card/Netbanking',
+            paymentStatus: 'Paid',
+            cfOrderId: orderData.orderId,
+            cfPaymentSessionId: orderData.paymentSessionId
+          });
+          showToast('Payment successful! Your order has been placed.', 'success');
+        } else {
+          // If modal closed without error or user redirected
+          setIsSubmitting(false);
+          setStatusMessage('');
+        }
+      }).catch((err) => {
+        console.error('Checkout error:', err);
+        setIsSubmitting(false);
+        setStatusMessage('');
+        showToast('Payment process interrupted. Please try again.', 'error');
+      });
+
+    } catch (err) {
+      console.error('Cashfree init error:', err);
       setIsSubmitting(false);
-      setCompletedOrder(order);
-      setCurrentRoute({ name: 'order-success', orderId: order.id });
-    }, 600);
+      setStatusMessage('');
+      showToast(err.message || 'Could not connect to Cashfree payment gateway.', 'error');
+    }
   };
 
   if (cart.length === 0) {
@@ -351,12 +447,12 @@ export default function CheckoutPage({ setCurrentRoute, setCompletedOrder }) {
                 <h2 className="font-display font-bold text-slate-900 text-lg">
                   Select Payment Method
                 </h2>
-                <p className="text-xs text-slate-500">100% Secure & Encrypted Indian Payment Processing</p>
+                <p className="text-xs text-slate-500">100% Secure & Encrypted by Cashfree Payments (RBI Authorized)</p>
               </div>
             </div>
 
             <div className="space-y-3">
-              {/* Option 1: UPI */}
+              {/* Option 1: Cashfree UPI */}
               <label 
                 onClick={() => setPaymentMethod('UPI')}
                 className={`p-4 rounded-2xl border-2 cursor-pointer transition flex items-center justify-between ${
@@ -368,41 +464,20 @@ export default function CheckoutPage({ setCurrentRoute, setCompletedOrder }) {
                     <QrCode className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="font-bold text-xs sm:text-sm text-slate-900 block">
-                      Instant UPI / QR Code & Net Banking
-                    </span>
-                    <span className="text-[11px] text-slate-500">Google Pay, PhonePe, Paytm, BHIM</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-xs sm:text-sm text-slate-900 block">
+                        ⚡ UPI / QR Code
+                      </span>
+                      <span className="text-[10px] font-extrabold text-teal-700 bg-teal-100 px-2 py-0.5 rounded-full">
+                        Fastest
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-500">GPay, PhonePe, Paytm, BHIM</span>
                   </div>
                 </div>
-                <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                  Fastest
-                </span>
               </label>
 
-              {/* Option 2: Cash on Delivery */}
-              <label 
-                onClick={() => setPaymentMethod('COD')}
-                className={`p-4 rounded-2xl border-2 cursor-pointer transition flex items-center justify-between ${
-                  paymentMethod === 'COD' ? 'border-teal-700 bg-teal-50/40 shadow-sm' : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
-                    <Banknote className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <span className="font-bold text-xs sm:text-sm text-slate-900 block">
-                      Cash on Delivery (COD)
-                    </span>
-                    <span className="text-[11px] text-slate-500">Pay in cash or UPI when your parcel arrives</span>
-                  </div>
-                </div>
-                <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
-                  Zero Advance
-                </span>
-              </label>
-
-              {/* Option 3: Credit / Debit Card */}
+              {/* Option 2: Cashfree Cards & NetBanking */}
               <label 
                 onClick={() => setPaymentMethod('Card')}
                 className={`p-4 rounded-2xl border-2 cursor-pointer transition flex items-center justify-between ${
@@ -415,9 +490,29 @@ export default function CheckoutPage({ setCurrentRoute, setCompletedOrder }) {
                   </div>
                   <div>
                     <span className="font-bold text-xs sm:text-sm text-slate-900 block">
-                      Credit / Debit Card (Visa, Mastercard, RuPay)
+                      💳 Card & NetBanking
                     </span>
-                    <span className="text-[11px] text-slate-500">All major Indian bank cards supported</span>
+                    <span className="text-[11px] text-slate-500">Visa, Mastercard, RuPay & Banks</span>
+                  </div>
+                </div>
+              </label>
+
+              {/* Option 3: Cash on Delivery */}
+              <label 
+                onClick={() => setPaymentMethod('COD')}
+                className={`p-4 rounded-2xl border-2 cursor-pointer transition flex items-center justify-between ${
+                  paymentMethod === 'COD' ? 'border-teal-700 bg-teal-50/40 shadow-sm' : 'border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
+                    <Banknote className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-xs sm:text-sm text-slate-900 block">
+                      💵 Cash on Delivery (COD)
+                    </span>
+                    <span className="text-[11px] text-slate-500">Pay when parcel arrives</span>
                   </div>
                 </div>
               </label>
@@ -503,6 +598,14 @@ export default function CheckoutPage({ setCurrentRoute, setCompletedOrder }) {
               </div>
             </div>
 
+            {/* Status Notification when submitting */}
+            {statusMessage && (
+              <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl flex items-center gap-2 text-xs font-semibold text-teal-800 animate-pulse">
+                <Loader2 className="w-4 h-4 animate-spin text-teal-700 shrink-0" />
+                <span>{statusMessage}</span>
+              </div>
+            )}
+
             {/* Place Order Button */}
             <button
               onClick={handlePlaceOrder}
@@ -510,11 +613,18 @@ export default function CheckoutPage({ setCurrentRoute, setCompletedOrder }) {
               className="w-full py-4 bg-teal-700 hover:bg-teal-800 disabled:bg-slate-400 text-white font-bold text-sm rounded-2xl shadow-xl shadow-teal-700/25 transition flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
             >
               {isSubmitting ? (
-                <span>Confirming Order...</span>
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Processing...</span>
+                </>
               ) : (
                 <>
                   <Lock className="w-4 h-4" />
-                  <span>Confirm Order · ₹{grandTotal.toLocaleString('en-IN')}</span>
+                  <span>
+                    {paymentMethod === 'COD'
+                      ? `Place COD Order · ₹${grandTotal.toLocaleString('en-IN')}`
+                      : `Pay ₹${grandTotal.toLocaleString('en-IN')} with Cashfree`}
+                  </span>
                 </>
               )}
             </button>
@@ -522,7 +632,7 @@ export default function CheckoutPage({ setCurrentRoute, setCompletedOrder }) {
             <div className="text-[11px] text-center text-slate-500 space-y-1 pt-1">
               <p className="flex items-center justify-center gap-1">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                <span>GST Tax Invoice generated instantly on confirmation</span>
+                <span>Secured by Cashfree 256-bit SSL & GST Invoice Ready</span>
               </p>
             </div>
 

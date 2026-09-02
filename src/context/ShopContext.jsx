@@ -140,16 +140,23 @@ export const ORDER_STATUSES = [
 ];
 
 export function ShopProvider({ children }) {
-  // Products state (synchronized with PRODUCTS_DATA and admin edits)
+  // Products state (synchronized with PRODUCTS_DATA, custom added products and admin edits)
   const [products, setProducts] = useState(() => {
     try {
       const saved = localStorage.getItem("lsw_products");
       if (saved) {
         const parsed = JSON.parse(saved);
-        return PRODUCTS_DATA.map(baseProd => {
-          const match = parsed.find(p => p.id === baseProd.id);
-          return match ? { ...baseProd, price: match.price ?? baseProd.price, stock: match.stock ?? baseProd.stock } : baseProd;
-        });
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const baseProductIds = new Set(PRODUCTS_DATA.map(p => p.id));
+          // Custom products added by admin
+          const customProducts = parsed.filter(p => p && p.id && !baseProductIds.has(p.id));
+          // Merge base products with any edits in localStorage
+          const mergedBase = PRODUCTS_DATA.map(baseProd => {
+            const match = parsed.find(p => p && p.id === baseProd.id);
+            return match ? { ...baseProd, ...match } : baseProd;
+          });
+          return [...customProducts, ...mergedBase];
+        }
       }
       return PRODUCTS_DATA;
     } catch {
@@ -280,29 +287,64 @@ export function ShopProvider({ children }) {
           .select('*');
 
         if (!prodErr && dbProducts && dbProducts.length > 0) {
-          const formattedProducts = dbProducts.map(p => ({
-            id: p.id,
-            name: p.name,
-            category: p.category,
-            gender: p.gender,
-            price: Number(p.price),
-            originalPrice: p.original_price ? Number(p.original_price) : undefined,
-            rating: Number(p.rating) || 4.8,
-            reviewsCount: p.reviews_count || 0,
-            badge: p.badge,
-            frameShape: p.frame_shape,
-            frameMaterial: p.frame_material,
-            frameSize: p.frame_size,
-            lensCompatible: p.lens_compatible !== false,
-            colors: p.colors || [],
-            images: p.images || [],
-            description: p.description,
-            features: p.features || [],
-            sku: p.sku,
-            inStock: p.in_stock !== false,
-            stockQuantity: p.stock_quantity || 20
-          }));
-          setProducts(formattedProducts);
+          const formattedProducts = dbProducts.map(p => {
+            const colorsList = Array.isArray(p.colors) && p.colors.length > 0 
+              ? p.colors 
+              : (p.colors ? [p.colors] : ['Classic Black']);
+            const imagesList = Array.isArray(p.images) && p.images.length > 0 
+              ? p.images 
+              : (p.img ? [p.img] : ['https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&w=800&q=80']);
+            const mainImg = imagesList[0] || p.img || 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&w=800&q=80';
+            const catType = p.category || p.type || 'eyeglasses';
+            const genderVal = p.gender || 'unisex';
+            const catsList = p.cats || (genderVal === 'men' ? ['men'] : genderVal === 'women' ? ['women'] : genderVal === 'kids' ? ['kids'] : ['men', 'women']);
+
+            return {
+              id: p.id,
+              name: p.name,
+              type: catType,
+              category: catType,
+              gender: genderVal,
+              cats: catsList,
+              price: Number(p.price) || 999,
+              mrp: p.original_price ? Number(p.original_price) : (p.mrp ? Number(p.mrp) : Math.round((Number(p.price) || 999) * 1.6)),
+              originalPrice: p.original_price ? Number(p.original_price) : undefined,
+              rating: Number(p.rating) || 4.8,
+              reviews: p.reviews_count || p.reviews || 12,
+              reviewsCount: p.reviews_count || p.reviews || 12,
+              badge: p.badge,
+              bestSeller: p.badge === 'Bestseller' || p.bestSeller || false,
+              isNew: p.badge === 'New Arrival' || p.isNew || false,
+              shape: p.frame_shape || p.shape || 'Rectangle',
+              frameShape: p.frame_shape || p.shape || 'Rectangle',
+              material: p.frame_material || p.material || 'Handcrafted Italian Acetate',
+              frameMaterial: p.frame_material || p.material || 'Handcrafted Italian Acetate',
+              size: p.frame_size || p.size || 'Medium (50-18-142)',
+              frameSize: p.frame_size || p.size || 'Medium (50-18-142)',
+              lensCompatible: p.lens_compatible !== false,
+              frameOnlyAvailable: p.frameOnlyAvailable !== false,
+              prescriptionAvailable: p.prescriptionAvailable !== false,
+              lensOptionsAvailable: p.lens_compatible !== false && p.lensOptionsAvailable !== false,
+              color: colorsList[0],
+              colors: colorsList,
+              img: mainImg,
+              gallery: imagesList,
+              images: imagesList,
+              description: p.description || 'Premium quality handcrafted eyewear from LENS S WORLD.',
+              features: Array.isArray(p.features) && p.features.length > 0 ? p.features : ["Handcrafted Ergonomic Design", "Prescription & Blue Cut Screen Compatible", "Smooth Steel Hinges", "Ultra-Lightweight Daily Comfort"],
+              sku: p.sku || `LSW-DB-${Math.floor(100 + Math.random() * 900)}`,
+              stock: p.stock_quantity !== undefined ? p.stock_quantity : (p.stock !== undefined ? p.stock : 20),
+              stockQuantity: p.stock_quantity !== undefined ? p.stock_quantity : 20,
+              inStock: p.in_stock !== false
+            };
+          });
+
+          // Merge custom/DB products with base catalog
+          setProducts(prev => {
+            const dbIds = new Set(formattedProducts.map(p => p.id));
+            const remaining = prev.filter(p => !dbIds.has(p.id));
+            return [...formattedProducts, ...remaining];
+          });
         }
       } catch (err) {
         console.warn("Supabase fetch notice:", err.message);
@@ -449,11 +491,11 @@ export function ShopProvider({ children }) {
 
   // Order Placement
   const placeOrder = async (orderData) => {
-    const newOrderId = `LSW-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newOrderId = orderData.cfOrderId || `LSW-${Math.floor(1000 + Math.random() * 9000)}`;
     const newOrder = {
       id: newOrderId,
       createdAt: new Date().toISOString(),
-      status: "Placed",
+      status: orderData.paymentStatus === 'Paid' ? "Payment Confirmed" : "Placed",
       items: [...cart],
       subtotal,
       discount,
@@ -463,11 +505,13 @@ export function ShopProvider({ children }) {
       total: grandTotal,
       customer: orderData.customer,
       paymentMethod: orderData.paymentMethod || "Cash on Delivery",
-      paymentStatus: orderData.paymentMethod === "Cash on Delivery" ? "Pending" : "Paid",
+      paymentStatus: orderData.paymentStatus || (orderData.paymentMethod === "Cash on Delivery" ? "Pending" : "Paid"),
       prescriptionMethod: orderData.prescriptionMethod || null,
       prescriptionFile: orderData.prescriptionFile || null,
       prescriptionDetails: orderData.prescriptionDetails || null,
-      notes: orderData.notes || ""
+      notes: orderData.notes || "",
+      cfOrderId: orderData.cfOrderId || null,
+      cfPaymentSessionId: orderData.cfPaymentSessionId || null
     };
 
     // Optimistic UI update
@@ -526,16 +570,41 @@ export function ShopProvider({ children }) {
 
   // Admin product management
   const updateProduct = async (productId, updatedFields) => {
-    setProducts(prev => prev.map(p => p.id === productId ? { ...p, ...updatedFields } : p));
+    setProducts(prev => prev.map(p => {
+      if (p.id === productId) {
+        const updated = { ...p, ...updatedFields };
+        if (updatedFields.price !== undefined && updatedFields.mrp === undefined && !updated.mrp) {
+          updated.mrp = Math.round(Number(updatedFields.price) * 1.6);
+        }
+        return updated;
+      }
+      return p;
+    }));
     showToast("Product details updated successfully!", "success");
 
     if (supabase) {
       try {
-        const { error } = await supabase
-          .from('products')
-          .update(updatedFields)
-          .eq('id', productId);
-        if (error) console.warn("Supabase product update notice:", error.message);
+        const dbPayload = {};
+        if (updatedFields.name !== undefined) dbPayload.name = updatedFields.name;
+        if (updatedFields.price !== undefined) dbPayload.price = Number(updatedFields.price);
+        if (updatedFields.mrp !== undefined) dbPayload.original_price = Number(updatedFields.mrp);
+        if (updatedFields.stock !== undefined) {
+          dbPayload.stock_quantity = Number(updatedFields.stock);
+          dbPayload.in_stock = Number(updatedFields.stock) > 0;
+        }
+        if (updatedFields.type !== undefined) dbPayload.category = updatedFields.type;
+        if (updatedFields.shape !== undefined) dbPayload.frame_shape = updatedFields.shape;
+        if (updatedFields.material !== undefined) dbPayload.frame_material = updatedFields.material;
+        if (updatedFields.img !== undefined) dbPayload.images = [updatedFields.img];
+        if (updatedFields.description !== undefined) dbPayload.description = updatedFields.description;
+
+        if (Object.keys(dbPayload).length > 0) {
+          const { error } = await supabase
+            .from('products')
+            .update(dbPayload)
+            .eq('id', productId);
+          if (error) console.warn("Supabase product update notice:", error.message);
+        }
       } catch (err) {
         console.warn("Supabase product error:", err);
       }
@@ -543,12 +612,66 @@ export function ShopProvider({ children }) {
   };
 
   const addProduct = async (newProduct) => {
+    const slug = (newProduct.name || 'custom').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const colorVal = newProduct.color || 'Classic Black';
+    const colorsArr = Array.isArray(newProduct.colors) && newProduct.colors.length > 0 
+      ? newProduct.colors 
+      : [colorVal];
+    const imgVal = newProduct.img || 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&w=800&q=80';
+    const galleryArr = Array.isArray(newProduct.gallery) && newProduct.gallery.length > 0 
+      ? newProduct.gallery 
+      : [imgVal];
+    const sellingPrice = Number(newProduct.price) || 1299;
+    const mrpPrice = Number(newProduct.mrp) || Math.round(sellingPrice * 1.65);
+    const prodType = newProduct.type || 'eyeglasses';
+    const genderVal = newProduct.gender || 'unisex';
+    
+    // Compute category tags for filtering
+    let catsArr = newProduct.cats;
+    if (!catsArr || !Array.isArray(catsArr) || catsArr.length === 0) {
+      if (genderVal === 'men') catsArr = ['men'];
+      else if (genderVal === 'women') catsArr = ['women'];
+      else if (genderVal === 'kids') catsArr = ['kids'];
+      else if (genderVal === 'couple') catsArr = ['couple', 'men', 'women'];
+      else catsArr = ['men', 'women'];
+    }
+
     const productWithId = {
-      ...newProduct,
-      id: `lens-s-world-${(newProduct.name || 'custom').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`
+      id: `lens-s-world-${slug}-${Date.now()}`,
+      name: newProduct.name || "Custom Frame",
+      brand: newProduct.brand || "LENS S WORLD",
+      type: prodType,
+      category: prodType,
+      gender: genderVal,
+      cats: catsArr,
+      shape: newProduct.shape || 'Rectangle',
+      material: newProduct.material || 'Handcrafted Italian Acetate',
+      color: colorVal,
+      colors: colorsArr,
+      price: sellingPrice,
+      mrp: mrpPrice,
+      stock: Number(newProduct.stock) || 20,
+      sku: newProduct.sku || `LSW-ADM-${Math.floor(1000 + Math.random() * 9000)}`,
+      rating: Number(newProduct.rating) || 4.9,
+      reviews: Number(newProduct.reviews) || 14,
+      isNew: true,
+      bestSeller: Boolean(newProduct.bestSeller),
+      size: newProduct.size || 'Medium (50-18-142)',
+      weight: newProduct.weight || '16g',
+      img: imgVal,
+      gallery: galleryArr,
+      images: galleryArr,
+      description: newProduct.description || `${newProduct.name || 'Premium Eyewear'} crafted with high precision from LENS S WORLD.`,
+      features: Array.isArray(newProduct.features) && newProduct.features.length > 0 
+        ? newProduct.features 
+        : ["Handcrafted Ergonomic Design", "Prescription & Blue Cut Screen Compatible", "Smooth 5-Barrel Hinges", "Ultra-Lightweight Daily Comfort"],
+      frameOnlyAvailable: newProduct.frameOnlyAvailable !== false,
+      prescriptionAvailable: newProduct.prescriptionAvailable !== false,
+      lensOptionsAvailable: newProduct.lensOptionsAvailable !== false && prodType !== 'contact-lenses'
     };
+
     setProducts(prev => [productWithId, ...prev]);
-    showToast("New product added to catalog!", "success");
+    showToast(`Product "${productWithId.name}" added to catalog!`, "success");
 
     if (supabase) {
       try {
@@ -556,29 +679,48 @@ export function ShopProvider({ children }) {
           {
             id: productWithId.id,
             name: productWithId.name,
-            category: productWithId.category,
+            category: productWithId.type,
             gender: productWithId.gender,
             price: productWithId.price,
-            original_price: productWithId.originalPrice,
-            rating: productWithId.rating || 4.8,
-            reviews_count: productWithId.reviewsCount || 0,
-            badge: productWithId.badge,
-            frame_shape: productWithId.frameShape,
-            frame_material: productWithId.frameMaterial,
-            frame_size: productWithId.frameSize,
-            lens_compatible: productWithId.lensCompatible !== false,
-            colors: productWithId.colors || [],
-            images: productWithId.images || [],
+            original_price: productWithId.mrp,
+            rating: productWithId.rating,
+            reviews_count: productWithId.reviews,
+            badge: productWithId.bestSeller ? 'Bestseller' : 'New Arrival',
+            frame_shape: productWithId.shape,
+            frame_material: productWithId.material,
+            frame_size: productWithId.size,
+            lens_compatible: productWithId.lensOptionsAvailable,
+            colors: productWithId.colors,
+            images: productWithId.gallery,
             description: productWithId.description,
-            features: productWithId.features || [],
+            features: productWithId.features,
             sku: productWithId.sku,
-            in_stock: productWithId.inStock !== false,
-            stock_quantity: productWithId.stockQuantity || 20
+            in_stock: productWithId.stock > 0,
+            stock_quantity: productWithId.stock
           }
         ]);
         if (error) console.warn("Supabase product insert notice:", error.message);
       } catch (err) {
         console.warn("Supabase product insert error:", err);
+      }
+    }
+
+    return productWithId;
+  };
+
+  const deleteProduct = async (productId) => {
+    setProducts(prev => prev.filter(p => p.id !== productId));
+    showToast("Product deleted from catalog", "info");
+
+    if (supabase) {
+      try {
+        const { error } = await supabase
+          .from('products')
+          .delete()
+          .eq('id', productId);
+        if (error) console.warn("Supabase product delete notice:", error.message);
+      } catch (err) {
+        console.warn("Supabase product delete error:", err);
       }
     }
   };
@@ -616,6 +758,7 @@ export function ShopProvider({ children }) {
         updateOrderStatus,
         updateProduct,
         addProduct,
+        deleteProduct,
         showToast
       }}
     >

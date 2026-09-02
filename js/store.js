@@ -425,12 +425,12 @@ class Store {
   // Order Placement
   placeOrder(orderData) {
     const totals = this.getTotals();
-    const newOrderId = `LSW-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newOrderId = orderData.cfOrderId || `LSW-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const newOrder = {
       id: newOrderId,
       createdAt: new Date().toISOString(),
-      status: "Placed",
+      status: orderData.paymentStatus === 'Paid' ? "Payment Confirmed" : "Placed",
       items: JSON.parse(JSON.stringify(this.cart)),
       subtotal: totals.subtotal,
       discount: totals.discount,
@@ -440,11 +440,13 @@ class Store {
       total: totals.grandTotal,
       customer: orderData.customer,
       paymentMethod: orderData.paymentMethod || "Cash on Delivery",
-      paymentStatus: orderData.paymentMethod === "Cash on Delivery" ? "Pending" : "Paid",
+      paymentStatus: orderData.paymentStatus || (orderData.paymentMethod === "Cash on Delivery" ? "Pending" : "Paid"),
       prescriptionMethod: orderData.prescriptionMethod || null,
       prescriptionFile: orderData.prescriptionFile || null,
       prescriptionDetails: orderData.prescriptionDetails || null,
-      notes: orderData.notes || ""
+      notes: orderData.notes || "",
+      cfOrderId: orderData.cfOrderId || null,
+      cfPaymentSessionId: orderData.cfPaymentSessionId || null
     };
 
     this.orders.unshift(newOrder);

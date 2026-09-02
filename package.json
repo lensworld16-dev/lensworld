@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@cashfreepayments/cashfree-js": "^1.0.7",
     "@emailjs/browser": "^4.4.1",
     "@supabase/supabase-js": "^2.112.4",
     "canvas-confetti": "^1.9.4",
