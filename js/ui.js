@@ -191,16 +191,12 @@ export const UI = {
       <!-- ✨ New Arrivals & Trending Eyewear Showcase (Newly Added Products Appear Right Here!) -->
       <section class="featured-showcase-section">
         <div class="container">
-          <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:0.85rem; flex-wrap:wrap; gap:0.5rem;">
-            <div>
-              <span style="font-size:0.75rem; font-weight:800; color:#dc2626; text-transform:uppercase; letter-spacing:0.06em; display:inline-flex; align-items:center; gap:0.35rem;">
-                <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#dc2626;"></span>
-                Fresh Drops & Latest Additions
-              </span>
-              <h2 style="font-size:1.4rem; font-weight:800; color:#000040; margin:0.2rem 0 0;">✨ New Arrivals & Trending Eyewear</h2>
-            </div>
-            <a href="#shop?tag=new" style="font-size:0.82rem; font-weight:700; color:#000040; text-decoration:none; background:#ffffff; border:1px solid #cbd5e1; padding:0.35rem 0.75rem; border-radius:6px;">
-              View All New (${recentAndFeatured.length}) →
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.85rem; gap:0.5rem;">
+            <h2 style="font-size:clamp(1.05rem, 3.8vw, 1.35rem); font-weight:800; color:#000040; margin:0; white-space:nowrap; display:flex; align-items:center; gap:0.35rem;">
+              <span>✨ New Arrivals</span>
+            </h2>
+            <a href="#shop?tag=new" style="font-size:0.8rem; font-weight:700; color:#000040; text-decoration:none; background:#ffffff; border:1px solid #cbd5e1; padding:0.32rem 0.65rem; border-radius:6px; white-space:nowrap; flex-shrink:0;">
+              View All (${recentAndFeatured.length}) →
             </a>
           </div>
 
@@ -217,7 +213,7 @@ export const UI = {
 
           <!-- Product Cards Grid -->
           <div class="products-grid" id="home-showcase-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:1.25rem;">
-            ${recentAndFeatured.slice(0, 8).map(p => this.renderProductCard(p)).join('')}
+            ${recentAndFeatured.slice(0, 4).map(p => this.renderProductCard(p)).join('')}
           </div>
         </div>
       </section>
@@ -1683,17 +1679,42 @@ export const UI = {
 
   // Render Order Success & Printable Official Receipt (Clean & Compact)
   renderOrderSuccessPage(orderId) {
-    const order = store.orders.find(o => o.id === orderId) || store.orders[0] || {
+    const order = store.orders.find(o => o.id === orderId || o.cfOrderId === orderId);
+
+    // If order not found in local store yet, trigger auto-verification with Cashfree
+    if (!order && orderId) {
+      setTimeout(() => {
+        if (window.verifyCashfreeOrderOnSuccess) {
+          window.verifyCashfreeOrderOnSuccess(orderId);
+        }
+      }, 400);
+
+      return `
+        <div class="section" style="padding:3.5rem 1rem; max-width:540px; margin:0 auto; text-align:center;">
+          <div style="width:60px; height:60px; border-radius:50%; background:#e0f2fe; color:#0284c7; display:inline-flex; align-items:center; justify-content:center; font-size:1.8rem; margin:0 auto 1rem; box-shadow:0 4px 14px rgba(2,132,199,0.15);">⏳</div>
+          <h2 style="font-size:1.4rem; font-weight:800; color:#000040; margin:0 0 0.35rem 0;">Verifying Cashfree Payment...</h2>
+          <p style="color:#64748b; font-size:0.85rem; margin:0 0 1.5rem 0;">Confirming transaction status for Order <strong>#${orderId}</strong> with Cashfree server.</p>
+          <div style="display:flex; justify-content:center; gap:0.5rem;">
+            <button type="button" class="btn btn-navy btn-sm" onclick="if(window.verifyCashfreeOrderOnSuccess) window.verifyCashfreeOrderOnSuccess('${orderId}')" style="padding:0.5rem 1.25rem; font-size:0.82rem; font-weight:700;">
+              Check Status Now
+            </button>
+            <a href="#shop" class="btn btn-outline btn-sm" style="padding:0.5rem 1rem; font-size:0.82rem;">Return to Shop</a>
+          </div>
+        </div>
+      `;
+    }
+
+    const currentOrder = order || store.orders[0] || {
       id: orderId || 'LSW-1001',
       createdAt: new Date().toISOString(),
       customer: { name: 'Customer', phone: '9876543210', email: '', address: 'Main Road', city: 'Mumbai', pincode: '400001' },
       items: store.products.slice(0, 1).map(p => ({ ...p, qty: 1, selectedLens: { name: 'Anti-Glare (ARC)', price: 499 } })),
       total: 1498,
-      paymentMethod: 'UPI'
+      paymentMethod: 'Cashfree Online'
     };
 
-    const whatsappUrl = `https://wa.me/${STORE_INFO.whatsappNumber}?text=${encodeURIComponent(formatOrderForWhatsApp(order))}`;
-    const orderDate = new Date(order.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const whatsappUrl = `https://wa.me/${STORE_INFO.whatsappNumber}?text=${encodeURIComponent(formatOrderForWhatsApp(currentOrder))}`;
+    const orderDate = new Date(currentOrder.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
     return `
       <div class="section" style="padding:1.5rem 1rem 3rem; max-width:680px; margin:0 auto;">
@@ -1701,7 +1722,7 @@ export const UI = {
         <!-- Success Banner -->
         <div class="no-print" style="text-align:center; margin-bottom:1.25rem;">
           <div style="width:48px; height:48px; border-radius:50%; background:#dcfce7; color:#16a34a; display:inline-flex; align-items:center; justify-content:center; font-size:1.5rem; font-weight:800; margin-bottom:0.5rem; box-shadow:0 4px 12px rgba(22,163,74,0.15);">✓</div>
-          <h1 style="font-size:1.35rem; font-weight:800; color:#000040; margin:0 0 0.25rem 0;">Order #${order.id} Confirmed!</h1>
+          <h1 style="font-size:1.35rem; font-weight:800; color:#000040; margin:0 0 0.25rem 0;">Order #${currentOrder.id} Confirmed!</h1>
           <p style="color:#64748b; font-size:0.82rem; margin:0 0 1rem 0;">Order details & tracking link sent to your WhatsApp & Email.</p>
 
           <!-- Quick Action Buttons -->
@@ -1712,7 +1733,7 @@ export const UI = {
             <button type="button" class="btn btn-outline btn-sm" onclick="window.print()" style="border-radius:8px; padding:0.45rem 0.9rem; font-size:0.78rem; font-weight:700; border-color:#cbd5e1; color:#000040;">
               🖨️ Print Receipt
             </button>
-            <a href="#track?id=${order.id}" class="btn btn-outline btn-sm" style="border-radius:8px; padding:0.45rem 0.9rem; font-size:0.78rem; font-weight:700; border-color:#cbd5e1; color:#000040;">
+            <a href="#track?id=${currentOrder.id}" class="btn btn-outline btn-sm" style="border-radius:8px; padding:0.45rem 0.9rem; font-size:0.78rem; font-weight:700; border-color:#cbd5e1; color:#000040;">
               🚚 Track Order
             </a>
           </div>
@@ -1730,7 +1751,7 @@ export const UI = {
             </div>
             <div style="text-align:right;">
               <span style="background:#000040; color:#fff; font-size:0.65rem; font-weight:800; padding:2px 7px; border-radius:4px; letter-spacing:0.04em;">TAX INVOICE</span>
-              <div style="font-size:0.85rem; font-weight:800; color:#000040; margin-top:0.2rem;">#${order.id}</div>
+              <div style="font-size:0.85rem; font-weight:800; color:#000040; margin-top:0.2rem;">#${currentOrder.id}</div>
               <small style="font-size:0.68rem; color:#94a3b8;">${orderDate}</small>
             </div>
           </div>
@@ -1739,67 +1760,67 @@ export const UI = {
           <div style="display:grid; grid-template-columns:1.2fr 1fr; gap:0.75rem; background:#f8fafc; padding:0.75rem 0.85rem; border-radius:10px; margin-bottom:0.85rem; font-size:0.78rem;">
             <div>
               <span style="font-size:0.68rem; font-weight:800; color:#64748b; text-transform:uppercase; display:block;">Deliver To:</span>
-              <strong style="color:#000040; font-size:0.84rem;">${order.customer?.name || 'Customer'}</strong>
-              <div style="color:#334155;">📱 ${order.customer?.phone || '-'}</div>
-              ${order.customer?.email ? `<div style="color:#334155; font-size:0.72rem;">✉️ ${order.customer.email}</div>` : ''}
-              <div style="color:#475569; font-size:0.72rem; line-height:1.25; margin-top:2px;">📍 ${order.customer?.address || ''}, ${order.customer?.city || ''} ${order.customer?.pincode || ''}</div>
+              <strong style="color:#000040; font-size:0.84rem;">${currentOrder.customer?.name || 'Customer'}</strong>
+              <div style="color:#334155;">📱 ${currentOrder.customer?.phone || '-'}</div>
+              ${currentOrder.customer?.email ? `<div style="color:#334155; font-size:0.72rem;">✉️ ${currentOrder.customer.email}</div>` : ''}
+              <div style="color:#475569; font-size:0.72rem; line-height:1.25; margin-top:2px;">📍 ${[currentOrder.customer?.address, currentOrder.customer?.city, currentOrder.customer?.pincode ? `PIN: ${currentOrder.customer.pincode}` : ''].filter(Boolean).join(', ')}</div>
             </div>
             <div style="text-align:right;">
               <span style="font-size:0.68rem; font-weight:800; color:#64748b; text-transform:uppercase; display:block;">Payment:</span>
-              <strong style="color:#000040; font-size:0.82rem;">${order.paymentMethod || 'Instant UPI'}</strong>
+              <strong style="color:#000040; font-size:0.82rem;">${currentOrder.paymentMethod || 'Instant UPI'}</strong>
               <div style="margin-top:0.25rem;">
-                <span style="background:${order.paymentMethod === 'Cash on Delivery' ? '#fef3c7' : '#ecfdf5'}; color:${order.paymentMethod === 'Cash on Delivery' ? '#b45309' : '#059669'}; font-size:0.68rem; font-weight:800; padding:2px 7px; border-radius:12px; display:inline-block;">
-                  ${order.paymentMethod === 'Cash on Delivery' ? 'Cash on Delivery' : '✓ Payment Confirmed'}
+                <span style="background:${currentOrder.paymentMethod === 'Cash on Delivery' ? '#fef3c7' : '#ecfdf5'}; color:${currentOrder.paymentMethod === 'Cash on Delivery' ? '#b45309' : '#059669'}; font-size:0.68rem; font-weight:800; padding:2px 7px; border-radius:12px; display:inline-block;">
+                  ${currentOrder.paymentMethod === 'Cash on Delivery' ? 'Cash on Delivery' : '✓ Payment Confirmed'}
                 </span>
               </div>
             </div>
           </div>
 
-          <!-- Itemized List -->
-          <div style="margin-bottom:0.85rem;">
-            <div style="font-size:0.7rem; font-weight:800; color:#64748b; text-transform:uppercase; margin-bottom:0.4rem; padding-bottom:0.25rem; border-bottom:1px solid #f1f5f9;">
-              Items Ordered
-            </div>
-            ${(order.items || []).map(it => {
-              const unitRate = it.price + (it.selectedLens?.price || 0);
-              return `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0; border-bottom:1px dashed #f1f5f9; font-size:0.78rem;">
-                  <div style="flex:1; padding-right:0.5rem;">
-                    <strong style="color:#000040; font-size:0.82rem;">${it.name}</strong>
-                    <div style="font-size:0.7rem; color:#64748b;">
-                      ${it.selectedLens ? `👓 Lens: ${it.selectedLens.name}` : 'Frame Only'} • Qty: ${it.qty}
-                    </div>
-                  </div>
-                  <div style="text-align:right; font-weight:800; color:#000040; font-size:0.84rem;">
-                    ${this.formatPrice(unitRate * it.qty)}
-                  </div>
-                </div>
-              `;
-            }).join('')}
-          </div>
+          <!-- Items Table -->
+          <table style="width:100%; border-collapse:collapse; font-size:0.8rem; margin-bottom:0.85rem;">
+            <thead>
+              <tr style="border-bottom:1.5px solid #e2e8f0; color:#64748b; text-align:left; font-size:0.72rem;">
+                <th style="padding:0.4rem 0;">Item</th>
+                <th style="padding:0.4rem 0.5rem; text-align:center;">Qty</th>
+                <th style="padding:0.4rem 0; text-align:right;">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(currentOrder.items || []).map(item => `
+                <tr style="border-bottom:1px solid #f1f5f9;">
+                  <td style="padding:0.5rem 0;">
+                    <strong style="color:#000040;">${item.name}</strong>
+                    ${item.selectedLens ? `<div style="font-size:0.7rem; color:#64748b;">Lens: ${item.selectedLens.name} (+${this.formatPrice(item.selectedLens.price)})</div>` : ''}
+                  </td>
+                  <td style="padding:0.5rem; text-align:center; color:#334155;">${item.qty || 1}</td>
+                  <td style="padding:0.5rem 0; text-align:right; font-weight:700; color:#000040;">${this.formatPrice(((item.price || 0) + (item.selectedLens?.price || 0)) * (item.qty || 1))}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
 
-          <!-- Total Calculation Summary -->
-          <div style="border-top:1px solid #e2e8f0; padding-top:0.5rem; display:flex; flex-direction:column; gap:0.25rem; font-size:0.78rem; color:#475569;">
-            <div style="display:flex; justify-content:space-between;">
+          <!-- Totals Breakdown -->
+          <div style="border-top:1.5px solid #000040; padding-top:0.6rem; display:flex; flex-direction:column; gap:0.25rem; font-size:0.8rem;">
+            <div style="display:flex; justify-content:space-between; color:#64748b;">
               <span>Subtotal:</span>
-              <span style="font-weight:700; color:#1e293b;">${this.formatPrice(order.subtotal || order.total || 0)}</span>
+              <span>${this.formatPrice(currentOrder.subtotal || currentOrder.total)}</span>
             </div>
-            ${order.discount > 0 ? `
+            ${currentOrder.discount ? `
               <div style="display:flex; justify-content:space-between; color:#16a34a;">
                 <span>Discount:</span>
-                <span style="font-weight:700;">-${this.formatPrice(order.discount)}</span>
+                <span>-${this.formatPrice(currentOrder.discount)}</span>
               </div>
             ` : ''}
-            <div style="display:flex; justify-content:space-between;">
-              <span>Express Delivery:</span>
-              <span style="font-weight:700; color:#16a34a;">FREE</span>
+            <div style="display:flex; justify-content:space-between; color:#64748b;">
+              <span>Shipping:</span>
+              <span style="color:#16a34a; font-weight:700;">FREE</span>
             </div>
-            <div style="display:flex; justify-content:space-between; border-top:1.5px solid #000040; padding-top:0.4rem; margin-top:0.25rem; font-size:0.95rem; font-weight:800; color:#000040;">
-              <span>Total Paid:</span>
-              <span>${this.formatPrice(order.total || order.grandTotal || 0)}</span>
+            <div style="display:flex; justify-content:space-between; font-size:1.05rem; font-weight:800; color:#000040; border-top:1px solid #e2e8f0; padding-top:0.4rem; margin-top:0.2rem;">
+              <span>Grand Total:</span>
+              <span>${this.formatPrice(currentOrder.total || currentOrder.grandTotal || 0)}</span>
             </div>
           </div>
-
+          
           <!-- Compact Footer Guarantee -->
           <div style="margin-top:0.85rem; padding-top:0.5rem; border-top:1px dashed #e2e8f0; text-align:center; font-size:0.68rem; color:#64748b;">
             🛡️ <strong>1-Year Optical Guarantee</strong> • 100% Genuine Lenses • For support WhatsApp +91 86686 87897
@@ -2303,17 +2324,33 @@ export const UI = {
           </div>
         ` : ''}
 
-        <!-- Tab 1: Orders Management & Prescription Viewer -->
-        ${activeTab === 'orders' ? `
-          <div class="admin-section-box">
             <div class="admin-box-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
               <div>
                 <h3 style="font-size:1.15rem; font-weight:800; color:#000040; margin:0 0 0.2rem 0;">📦 Customer Orders (${store.orders.length})</h3>
-                <p style="color:#64748b; font-size:0.8rem; margin:0;">Track customer orders, view full delivery addresses, and chat on WhatsApp with 1-click.</p>
+                <p style="color:#64748b; font-size:0.8rem; margin:0;">Real-time customer orders synced across all devices with full addresses & WhatsApp link.</p>
               </div>
-              <span style="background:#ecfdf5; color:#059669; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:20px;">
-                ⚡ Live Orders
-              </span>
+              <div style="display:flex; gap:0.4rem; align-items:center;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="this.disabled=true; this.textContent='Refreshing...'; store.fetchOrdersFromSupabase().then(()=>{ const m=document.getElementById('app-main'); if(m) m.innerHTML=UI.renderAdminDashboard('orders'); });" style="font-size:0.72rem; padding:0.3rem 0.65rem; border-radius:6px; border-color:#cbd5e1; color:#000040;">
+                  🔄 Refresh Live Orders
+                </button>
+                <span style="background:#ecfdf5; color:#059669; font-size:0.72rem; font-weight:800; padding:3px 9px; border-radius:20px;">
+                  ⚡ Live Supabase
+                </span>
+              </div>
+            </div>
+
+            <!-- Instant Cashfree Payment Lookup & Recovery Tool -->
+            <div style="background:#f0fdfa; border:1px solid #99f6e4; border-radius:10px; padding:0.75rem 1rem; margin-top:0.85rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.65rem;">
+              <div>
+                <strong style="color:#0f766e; font-size:0.82rem; display:block;">🔍 Find & Recover Cashfree Payment by Order ID:</strong>
+                <span style="color:#115e59; font-size:0.72rem;">Enter any Cashfree Order ID (e.g. LSW_... or CF Payment ID) to fetch & add it to Admin immediately.</span>
+              </div>
+              <div style="display:flex; gap:0.4rem; align-items:center;">
+                <input type="text" id="admin-cf-lookup-input" placeholder="e.g. LSW_174000..." style="font-size:0.75rem; padding:0.35rem 0.6rem; border:1px solid #cbd5e1; border-radius:6px; min-width:180px;" />
+                <button type="button" class="btn btn-navy btn-sm" onclick="const id = document.getElementById('admin-cf-lookup-input')?.value?.trim(); if(id){ this.disabled=true; this.textContent='Checking...'; store.syncCashfreeOrder(id).then(()=>{ const m=document.getElementById('app-main'); if(m) m.innerHTML=UI.renderAdminDashboard('orders'); }).catch(e=>alert(e.message)).finally(()=>{ this.disabled=false; this.textContent='Verify & Add'; }); } else { alert('Please enter Cashfree Order ID'); }" style="font-size:0.75rem; padding:0.35rem 0.75rem; border-radius:6px;">
+                  Verify & Add
+                </button>
+              </div>
             </div>
 
             <!-- Modern Clean Order Cards List -->

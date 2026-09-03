@@ -150,6 +150,9 @@ class Store {
     this.cartDrawerOpen = false;
     this.quickViewProductId = null;
     this.customizingProductId = null;
+
+    // Fetch live orders from Supabase DB on initialization
+    this.fetchOrdersFromSupabase();
   }
 
   saveCategoryImages(images) {
@@ -491,7 +494,83 @@ class Store {
     this.saveOrders();
     this.clearCart();
     this.notify("order_placed", newOrder);
+
+    // Synchronize to Supabase DB so order is saved globally for Admin
+    fetch('/api/save-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newOrder)
+    }).then(res => res.json()).then(data => {
+      console.log('✓ Order synced to Supabase DB:', data);
+    }).catch(err => console.warn('Supabase save-order async notice:', err));
+
     return newOrder;
+  }
+
+  // Fetch live orders from Supabase DB (Global cross-device Admin sync)
+  async fetchOrdersFromSupabase() {
+    try {
+      const res = await fetch('/api/get-orders');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.success && Array.isArray(data.orders)) {
+        const dbOrders = data.orders.map(o => ({
+          id: o.id,
+          createdAt: o.created_at || o.createdAt,
+          status: o.status,
+          items: Array.isArray(o.items) ? o.items : [],
+          subtotal: Number(o.subtotal || 0),
+          discount: Number(o.discount || 0),
+          couponApplied: o.coupon_applied || o.couponApplied,
+          shipping: Number(o.shipping || 0),
+          gst: Number(o.gst || 0),
+          total: Number(o.total || 0),
+          customer: o.customer || {},
+          paymentMethod: o.payment_method || o.paymentMethod || 'Cash on Delivery',
+          paymentStatus: o.payment_status || o.paymentStatus || 'Pending',
+          prescriptionMethod: o.prescription_method || o.prescriptionMethod,
+          prescriptionFile: o.prescription_file || o.prescriptionFile,
+          prescriptionDetails: o.prescription_details || o.prescriptionDetails,
+          notes: o.notes || ''
+        }));
+
+        if (dbOrders.length > 0) {
+          // Merge database orders with local orders (DB orders take precedence)
+          const orderMap = new Map();
+          dbOrders.forEach(o => orderMap.set(o.id, o));
+          this.orders.forEach(o => {
+            // Keep local non-mock order if not yet in DB
+            if (!orderMap.has(o.id) && !o.id.startsWith('LSW-928')) {
+              orderMap.set(o.id, o);
+            }
+          });
+
+          this.orders = Array.from(orderMap.values()).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          this.saveOrders();
+          this.notify("orders_updated", this.orders);
+          console.log(`✓ Synchronized ${this.orders.length} orders from Supabase`);
+        }
+      }
+    } catch (e) {
+      console.warn('Notice fetching Supabase orders:', e.message);
+    }
+  }
+
+  // Look up & Sync any Cashfree Order by ID into Admin
+  async syncCashfreeOrder(orderId) {
+    try {
+      const res = await fetch(`/api/verify-cashfree-order?orderId=${encodeURIComponent(orderId)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to verify order on Cashfree');
+      }
+      // Re-fetch orders from Supabase
+      await this.fetchOrdersFromSupabase();
+      return data;
+    } catch (err) {
+      console.error('Error syncing Cashfree order:', err);
+      throw err;
+    }
   }
 
   // Admin Methods
@@ -502,6 +581,13 @@ class Store {
       this.saveOrders();
       this.showToast(`Order #${orderId} marked as ${newStatus}`, "success");
       this.notify("admin_order_updated", order);
+
+      // Async update in Supabase
+      fetch('/api/save-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(order)
+      }).catch(e => console.warn('Supabase status update notice:', e));
     }
   }
 

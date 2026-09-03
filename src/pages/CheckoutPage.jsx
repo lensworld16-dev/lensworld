@@ -150,6 +150,17 @@ export default function CheckoutPage({ setCurrentRoute, setCompletedOrder }) {
     try {
       // 1. Create Cashfree Order on Server
       const tempOrderId = `LSW_${Date.now()}`;
+      const customerObj = {
+        name: formData.fullName,
+        phone: formData.phone.startsWith('+91') ? formData.phone : `+91 ${formData.phone}`,
+        email: formData.email,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        pincode: formData.pincode,
+        landmark: formData.landmark
+      };
+
       const res = await fetch('/api/create-cashfree-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -158,7 +169,19 @@ export default function CheckoutPage({ setCurrentRoute, setCompletedOrder }) {
           orderAmount: grandTotal,
           customerName: formData.fullName,
           customerPhone: formData.phone,
-          customerEmail: formData.email
+          customerEmail: formData.email,
+          customer: customerObj,
+          items: cart,
+          subtotal,
+          discount,
+          couponApplied,
+          shipping,
+          gst,
+          total: grandTotal,
+          paymentMethod: paymentMethod === 'UPI' ? 'Cashfree UPI' : 'Cashfree Card/Netbanking',
+          prescriptionMethod: hasPrescriptionItems ? prescriptionMethod : null,
+          prescriptionFile,
+          notes
         })
       });
 

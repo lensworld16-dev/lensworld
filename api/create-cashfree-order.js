@@ -18,11 +18,33 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { orderAmount, customerName, customerPhone, customerEmail, orderId } = req.body || {};
+    const { 
+      orderAmount, 
+      customerName, 
+      customerPhone, 
+      customerEmail, 
+      orderId,
+      customer,
+      items,
+      subtotal,
+      discount,
+      couponApplied,
+      shipping,
+      gst,
+      paymentMethod,
+      prescriptionMethod,
+      prescriptionFile,
+      prescriptionDetails,
+      notes
+    } = req.body || {};
 
-    if (!orderAmount || !customerPhone) {
+    if (!orderAmount || (!customerPhone && !customer?.phone)) {
       return res.status(400).json({ error: 'Missing required order amount or customer details' });
     }
+
+    const effectivePhone = customerPhone || customer?.phone;
+    const effectiveName = customerName || customer?.name || 'Customer';
+    const effectiveEmail = customerEmail || customer?.email || 'order@lenssworld.com';
 
     const appId = process.env.CASHFREE_APP_ID;
     const secretKey = process.env.CASHFREE_SECRET_KEY;
@@ -32,7 +54,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Cashfree credentials not configured on server' });
     }
 
-    const cleanPhone = String(customerPhone).replace(/\D/g, '').slice(-10);
+    const cleanPhone = String(effectivePhone).replace(/\D/g, '').slice(-10);
     const sanitizedOrderId = orderId || `LSW_${Date.now()}_${Math.floor(100 + Math.random() * 900)}`;
     const sanitizedCustomerId = `CUST_${cleanPhone || Date.now()}`;
 
@@ -50,14 +72,61 @@ export default async function handler(req, res) {
       }
     }
 
+    const customerObj = customer || {
+      name: effectiveName,
+      phone: cleanPhone,
+      email: effectiveEmail,
+      address: req.body?.address || '',
+      city: req.body?.city || '',
+      pincode: req.body?.pincode || ''
+    };
+
+    // 1. Pre-save full order with delivery address to Supabase BEFORE payment
+    const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://yexvmawaefkhcxbwaaxb.supabase.co';
+    const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_4Dekhuqa35f4JvkQ_QYRXw_5ZP-NjVd';
+
+    try {
+      await fetch(`${supabaseUrl}/rest/v1/orders`, {
+        method: 'POST',
+        headers: {
+          'apikey': supabaseAnonKey,
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates,return=minimal'
+        },
+        body: JSON.stringify({
+          id: sanitizedOrderId,
+          status: 'Payment Pending',
+          customer: customerObj,
+          items: items || [],
+          subtotal: Number(subtotal || orderAmount),
+          discount: Number(discount || 0),
+          coupon_applied: couponApplied || null,
+          shipping: Number(shipping || 0),
+          gst: Number(gst || 0),
+          total: Number(orderAmount),
+          payment_method: paymentMethod || 'Cashfree Online',
+          payment_status: 'Pending',
+          prescription_method: prescriptionMethod || null,
+          prescription_file: prescriptionFile || null,
+          prescription_details: prescriptionDetails || null,
+          notes: notes || `Cashfree Order ${sanitizedOrderId}`
+        })
+      });
+      console.log(`✓ Pre-saved pending order #${sanitizedOrderId} with full address to Supabase`);
+    } catch (dbErr) {
+      console.warn('Supabase pre-save notice:', dbErr.message);
+    }
+
+    // 2. Create Cashfree Order
     const payload = {
       order_id: sanitizedOrderId,
       order_amount: Number(orderAmount),
       order_currency: 'INR',
       customer_details: {
         customer_id: sanitizedCustomerId,
-        customer_name: (customerName || 'Customer').trim(),
-        customer_email: (customerEmail && customerEmail.includes('@')) ? customerEmail.trim() : 'order@lenssworld.com',
+        customer_name: effectiveName.trim(),
+        customer_email: (effectiveEmail && effectiveEmail.includes('@')) ? effectiveEmail.trim() : 'order@lenssworld.com',
         customer_phone: cleanPhone || '9999999999'
       },
       order_meta: {

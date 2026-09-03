@@ -814,16 +814,42 @@ window.AppEvents = {
 
     try {
       const tempOrderId = `LSW_${Date.now()}`;
+      const fullCustomer = { 
+        name: name.trim(), 
+        phone: phone.trim(), 
+        email: email.trim(), 
+        address: address.trim(), 
+        city: city.trim(), 
+        pincode: pincode.trim() 
+      };
+
+      const pendingOrderData = {
+        orderId: tempOrderId,
+        orderAmount: totals.grandTotal,
+        customerName: fullCustomer.name,
+        customerPhone: fullCustomer.phone,
+        customerEmail: fullCustomer.email,
+        customer: fullCustomer,
+        items: JSON.parse(JSON.stringify(store.cart)),
+        subtotal: totals.subtotal,
+        discount: totals.discount,
+        couponApplied: store.appliedCoupon,
+        shipping: totals.shipping,
+        gst: totals.gst,
+        total: totals.grandTotal,
+        paymentMethod: paymentMode === 'Card' ? 'Cashfree Card/Netbanking' : 'Cashfree UPI'
+      };
+
+      // Client storage backup
+      try {
+        sessionStorage.setItem('lsw_pending_order', JSON.stringify(pendingOrderData));
+        localStorage.setItem('lsw_pending_order', JSON.stringify(pendingOrderData));
+      } catch (e) {}
+
       const res = await fetch('/api/create-cashfree-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderId: tempOrderId,
-          orderAmount: totals.grandTotal,
-          customerName: name,
-          customerPhone: phone,
-          customerEmail: email
-        })
+        body: JSON.stringify(pendingOrderData)
       });
 
       const orderData = await res.json();
@@ -848,7 +874,7 @@ window.AppEvents = {
         redirectTarget: '_modal'
       };
 
-      cashfree.checkout(checkoutOptions).then((result) => {
+      cashfree.checkout(checkoutOptions).then(async (result) => {
         if (result.error) {
           console.warn('Cashfree payment modal error/cancelled:', result.error);
           if (submitBtn) {
@@ -863,12 +889,55 @@ window.AppEvents = {
           return;
         }
 
+        if (statusMsg) statusMsg.textContent = 'Verifying payment confirmation with Cashfree...';
+
+        // Check payment status with server
+        try {
+          const verifyRes = await fetch(`/api/verify-cashfree-order?orderId=${encodeURIComponent(tempOrderId)}`);
+          const verifyData = await verifyRes.json();
+
+          if (verifyData.isPaid) {
+            if (statusMsg) statusMsg.textContent = 'Payment verified! Finalizing order...';
+
+            const newOrder = store.placeOrder({
+              id: tempOrderId,
+              customer: fullCustomer,
+              items: pendingOrderData.items,
+              total: totals.grandTotal,
+              subtotal: totals.subtotal,
+              discount: totals.discount,
+              shipping: totals.shipping,
+              gst: totals.gst,
+              paymentMethod: paymentMode === 'Card' ? 'Cashfree Card/Netbanking' : 'Cashfree UPI',
+              paymentStatus: 'Paid',
+              cfOrderId: orderData.orderId,
+              cfPaymentSessionId: orderData.paymentSessionId
+            });
+
+            sendOrderEmail(newOrder).then(sent => {
+              if (sent) console.log("✓ Live EmailJS Order confirmation sent!");
+            }).catch(e => console.warn("Email notification error", e));
+
+            window.location.hash = `#order-success?id=${newOrder.id}`;
+            return;
+          }
+        } catch (vErr) {
+          console.warn('Verification check notice:', vErr);
+        }
+
         if (result.paymentDetails) {
           console.log('Payment Successful:', result.paymentDetails);
           if (statusMsg) statusMsg.textContent = 'Payment successful! Creating order...';
 
           const newOrder = store.placeOrder({
-            customer: { name, phone, email, address, city, pincode },
+            id: tempOrderId,
+            customer: fullCustomer,
+            items: pendingOrderData.items,
+            total: totals.grandTotal,
+            subtotal: totals.subtotal,
+            discount: totals.discount,
+            shipping: totals.shipping,
+            gst: totals.gst,
             paymentMethod: paymentMode === 'Card' ? 'Cashfree Card/Netbanking' : 'Cashfree UPI',
             paymentStatus: 'Paid',
             cfOrderId: orderData.orderId,
@@ -910,9 +979,62 @@ window.AppEvents = {
         statusMsg.style.color = '#e11d48';
         statusMsg.style.background = '#ffe4e6';
         statusMsg.textContent = err.message || 'Payment initiation failed.';
-      }
     }
   }
+};
+
+// Global Cashfree Order Verification on Redirect / Return
+window.verifyCashfreeOrderOnSuccess = async function(orderId) {
+  if (!orderId) return false;
+  try {
+    console.log('Verifying Cashfree order status for:', orderId);
+    const res = await fetch(`/api/verify-cashfree-order?orderId=${encodeURIComponent(orderId)}`);
+    const data = await res.json();
+
+    if (data.isPaid || data.orderStatus === 'PAID') {
+      let pending = null;
+      try {
+        const saved = sessionStorage.getItem('lsw_pending_order') || localStorage.getItem('lsw_pending_order');
+        if (saved) pending = JSON.parse(saved);
+      } catch (e) {}
+
+      const customer = data.dbOrder?.customer || pending?.customer || {
+        name: data.customer?.customer_name || 'Customer',
+        phone: data.customer?.customer_phone || '',
+        email: data.customer?.customer_email || ''
+      };
+
+      const items = data.dbOrder?.items || pending?.items || [];
+      const total = Number(data.orderAmount || data.dbOrder?.total || pending?.total || 0);
+
+      const confirmedOrder = store.placeOrder({
+        id: orderId,
+        customer,
+        items,
+        total,
+        paymentMethod: 'Cashfree Online',
+        paymentStatus: 'Paid',
+        cfOrderId: data.cfOrderId || null
+      });
+
+      sendOrderEmail(confirmedOrder).catch(e => console.warn(e));
+
+      // Clean up pending backup
+      try {
+        sessionStorage.removeItem('lsw_pending_order');
+        localStorage.removeItem('lsw_pending_order');
+      } catch (e) {}
+
+      const mainApp = document.getElementById('app-main');
+      if (mainApp) {
+        mainApp.innerHTML = UI.renderOrderSuccessPage(orderId);
+      }
+      return true;
+    }
+  } catch (err) {
+    console.error('Failed to verify on success return:', err);
+  }
+  return false;
 };
 
 // Application Bootstrapper
@@ -1380,7 +1502,7 @@ window.filterHomeShowcase = function(cat, btn) {
   if (filtered.length === 0) {
     grid.innerHTML = `<div style="grid-column:1/-1; padding:2.5rem 1rem; text-align:center; color:#64748b; font-size:0.85rem; background:#ffffff; border-radius:10px; border:1px dashed #cbd5e1;">No products found in this category yet.</div>`;
   } else {
-    grid.innerHTML = filtered.slice(0, 8).map(p => UI.renderProductCard(p)).join('');
+    grid.innerHTML = filtered.slice(0, 4).map(p => UI.renderProductCard(p)).join('');
   }
 };
 
