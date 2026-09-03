@@ -2321,9 +2321,11 @@ export const UI = {
                 </div>
               `).join('')}
             </div>
-          </div>
         ` : ''}
 
+        <!-- Tab 1: Orders Management & Prescription Viewer -->
+        ${activeTab === 'orders' ? `
+          <div class="admin-section-box">
             <div class="admin-box-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
               <div>
                 <h3 style="font-size:1.15rem; font-weight:800; color:#000040; margin:0 0 0.2rem 0;">📦 Customer Orders (${store.orders.length})</h3>

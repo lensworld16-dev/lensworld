@@ -979,6 +979,7 @@ window.AppEvents = {
         statusMsg.style.color = '#e11d48';
         statusMsg.style.background = '#ffe4e6';
         statusMsg.textContent = err.message || 'Payment initiation failed.';
+      }
     }
   }
 };
