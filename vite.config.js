@@ -5,6 +5,9 @@ import verifyCashfreeOrderHandler from './api/verify-cashfree-order.js';
 import getOrdersHandler from './api/get-orders.js';
 import saveOrderHandler from './api/save-order.js';
 import cashfreeWebhookHandler from './api/cashfree-webhook.js';
+import getProductsHandler from './api/get-products.js';
+import saveProductHandler from './api/save-product.js';
+import deleteProductHandler from './api/delete-product.js';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -72,6 +75,32 @@ export default defineConfig(({ mode }) => {
               req.on('end', async () => {
                 try { req.body = bodyStr ? JSON.parse(bodyStr) : {}; } catch { req.body = {}; }
                 await cashfreeWebhookHandler(req, createShimRes());
+              });
+              return;
+            }
+
+            if (url.pathname === '/api/get-products') {
+              await getProductsHandler(req, createShimRes());
+              return;
+            }
+
+            if (url.pathname === '/api/save-product') {
+              let bodyStr = '';
+              req.on('data', chunk => { bodyStr += chunk; });
+              req.on('end', async () => {
+                try { req.body = bodyStr ? JSON.parse(bodyStr) : {}; } catch { req.body = {}; }
+                await saveProductHandler(req, createShimRes());
+              });
+              return;
+            }
+
+            if (url.pathname === '/api/delete-product') {
+              let bodyStr = '';
+              req.on('data', chunk => { bodyStr += chunk; });
+              req.on('end', async () => {
+                req.query = Object.fromEntries(url.searchParams.entries());
+                try { req.body = bodyStr ? JSON.parse(bodyStr) : {}; } catch { req.body = {}; }
+                await deleteProductHandler(req, createShimRes());
               });
               return;
             }

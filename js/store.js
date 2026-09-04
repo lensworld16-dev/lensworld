@@ -151,8 +151,9 @@ class Store {
     this.quickViewProductId = null;
     this.customizingProductId = null;
 
-    // Fetch live orders from Supabase DB on initialization
+    // Fetch live orders and products from Supabase DB on initialization
     this.fetchOrdersFromSupabase();
+    this.fetchProductsFromSupabase();
   }
 
   saveCategoryImages(images) {
@@ -556,6 +557,99 @@ class Store {
     }
   }
 
+  // Fetch live products from Supabase DB (Global cross-device catalog sync)
+  async fetchProductsFromSupabase() {
+    try {
+      const res = await fetch('/api/get-products');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.success && Array.isArray(data.products)) {
+        const deletedIds = new Set(JSON.parse(localStorage.getItem("lsw_deleted_products") || "[]"));
+        
+        const dbProds = data.products
+          .filter(p => p && p.id && !deletedIds.has(p.id))
+          .map(p => {
+            const imgs = Array.isArray(p.images) && p.images.length > 0 
+              ? p.images 
+              : [p.img || 'https://chashmah.com/wp-content/uploads/2026/08/1001073265_768x768.webp'];
+            const primaryImg = imgs[0];
+            const isFeat = Boolean(p.badge === 'Bestseller' || p.badge === 'Featured' || p.badge === 'Trending' || p.is_featured || p.featured);
+            const cat = p.category || p.type || 'eyeglasses';
+            const gender = p.gender || 'unisex';
+
+            return {
+              id: p.id,
+              name: p.name,
+              sku: p.sku || p.id,
+              type: cat,
+              category: cat,
+              gender: gender,
+              cats: gender === 'unisex' ? ['men', 'women', 'unisex'] : [gender],
+              price: Number(p.price || 0),
+              mrp: Number(p.original_price || Math.round(Number(p.price || 0) * 1.6)),
+              rating: Number(p.rating || 4.9),
+              reviews: Number(p.reviews_count || 16),
+              badge: p.badge || '',
+              img: primaryImg,
+              gallery: imgs,
+              shape: p.frame_shape || 'Rectangle',
+              size: p.frame_size || '50-20-142',
+              color: Array.isArray(p.colors) && p.colors.length > 0 ? p.colors[0] : 'Black',
+              colors: Array.isArray(p.colors) && p.colors.length > 0 ? p.colors : ['Black'],
+              lensOptionsAvailable: p.lens_compatible !== false,
+              prescriptionAvailable: p.lens_compatible !== false,
+              frameOnlyAvailable: true,
+              inStock: p.in_stock !== false,
+              description: p.description || `${p.name} handcrafted with optical precision from LENS S WORLD.`,
+              features: Array.isArray(p.features) && p.features.length > 0 ? p.features : ["Ultra-Durable Frame", "Prescription Ready", "Premium Quality Finish"],
+              featured: isFeat,
+              isFeatured: isFeat,
+              bestSeller: isFeat,
+              isNew: p.badge === 'New',
+              createdAt: p.created_at ? new Date(p.created_at).getTime() : Date.now()
+            };
+          });
+
+        const dbIdSet = new Set(dbProds.map(p => p.id));
+
+        // Auto-sync any existing custom products in localStorage that are not yet in Supabase
+        const customProdsToPush = this.products.filter(p => {
+          return p && p.id && !dbIdSet.has(p.id) && !deletedIds.has(p.id) && p.id.startsWith('lens-s-world-custom-');
+        });
+
+        if (customProdsToPush.length > 0) {
+          customProdsToPush.forEach(prod => {
+            fetch('/api/save-product', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(prod)
+            }).catch(e => console.warn('Product auto-push notice:', e));
+          });
+        }
+
+        if (dbProds.length > 0) {
+          // Merge database products with local products (DB products take precedence at the top)
+          const mergedMap = new Map();
+          dbProds.forEach(p => mergedMap.set(p.id, p));
+
+          // Retain any existing catalog products not in DB
+          this.products.forEach(p => {
+            if (!mergedMap.has(p.id) && !deletedIds.has(p.id)) {
+              mergedMap.set(p.id, p);
+            }
+          });
+
+          this.products = Array.from(mergedMap.values());
+          this.saveProducts();
+          this.notify("products_updated", this.products);
+          console.log(`✓ Synchronized ${dbProds.length} products from Supabase`);
+        }
+      }
+    } catch (e) {
+      console.warn('Notice fetching Supabase products:', e.message);
+    }
+  }
+
   // Look up & Sync any Cashfree Order by ID into Admin
   async syncCashfreeOrder(orderId) {
     try {
@@ -616,6 +710,13 @@ class Store {
       this.saveProducts();
       this.showToast("Product updated successfully!", "success");
       this.notify("products_updated", this.products[idx]);
+
+      // Sync updated product to Supabase cloud database
+      fetch('/api/save-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this.products[idx])
+      }).catch(err => console.warn('Supabase product update error:', err));
     }
   }
 
@@ -643,6 +744,18 @@ class Store {
     this.saveProducts();
     this.showToast("New product added to catalog!", "success");
     this.notify("products_updated", productWithId);
+
+    // Save product to Supabase cloud database so all devices and phones see it immediately!
+    fetch('/api/save-product', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(productWithId)
+    }).then(res => res.json()).then(data => {
+      if (data.success) {
+        console.log('✓ Product successfully synced to Supabase Cloud DB:', productWithId.id);
+      }
+    }).catch(err => console.warn('Supabase product add notice:', err));
+
     return productWithId;
   }
 
@@ -656,6 +769,13 @@ class Store {
     this.saveProducts();
     this.showToast("Product removed from catalog.", "info");
     this.notify("products_updated", { id: productId, deleted: true });
+
+    // Delete from Supabase cloud database
+    fetch(`/api/delete-product?id=${encodeURIComponent(productId)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: productId })
+    }).catch(err => console.warn('Supabase product delete notice:', err));
   }
 
   bulkDeleteProducts(productIds) {
@@ -669,6 +789,15 @@ class Store {
     this.saveProducts();
     this.showToast(`Deleted ${productIds.length} products successfully!`, "info");
     this.notify("products_updated");
+
+    // Delete in Supabase cloud database
+    productIds.forEach(id => {
+      fetch(`/api/delete-product?id=${encodeURIComponent(id)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      }).catch(err => console.warn('Supabase bulk delete notice:', err));
+    });
   }
 
   bulkMoveCategory(productIds, newCategory) {
