@@ -6,4 +6,6 @@ dist
 .DS_Store
 __pycache__/
 *.pyc
+new images/
+"new images/"
 

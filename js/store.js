@@ -1,5 +1,5 @@
 // LENS S WORLD - Reactive State Manager (LocalStorage Powered)
-import { INITIAL_PRODUCTS, INITIAL_MOCK_ORDERS, COUPONS, STORE_INFO, CATEGORIES, LENS_PACKAGES, DEFAULT_CATEGORY_IMAGES } from './data.js';
+import { INITIAL_PRODUCTS, INITIAL_MOCK_ORDERS, COUPONS, STORE_INFO, CATEGORIES, LENS_PACKAGES, DEFAULT_CATEGORY_IMAGES, getProductImgHash } from './data.js';
 
 class Store {
   constructor() {
@@ -7,19 +7,14 @@ class Store {
 
     // 1. Products State
     try {
-      const oldMockIds = new Set([
-        "lens-s-world-ravenna-rectangle",
-        "lens-s-world-orbit-round-metal",
-        "lens-s-world-solaro-aviator",
-        "lens-s-world-bella-cat-eye",
-        "lens-s-world-velocity-sports",
-        "lens-s-world-azure-wayfarer",
-        "lens-s-world-clarity-reader",
-        "lens-s-world-focus-reading-pro",
-        "lens-s-world-aquasoft-monthly",
-        "lens-s-world-dailyclear-contacts",
-        "lens-s-world-lens-cleaner-kit"
-      ]);
+      const CATALOG_VERSION = "2026.09.v4_unique";
+      const storedVersion = localStorage.getItem("lsw_catalog_version");
+      if (storedVersion !== CATALOG_VERSION) {
+        localStorage.setItem("lsw_catalog_version", CATALOG_VERSION);
+        localStorage.removeItem("lsw_products");
+        localStorage.removeItem("lsw_deleted_products");
+      }
+
       const deletedIds = new Set(JSON.parse(localStorage.getItem("lsw_deleted_products") || "[]"));
       const saved = localStorage.getItem("lsw_products");
       
@@ -29,18 +24,34 @@ class Store {
         const resultList = [];
         const seenIds = new Set();
 
-        // 1. Keep all items from saved in their EXACT saved order (newly added products stay at the top!)
+        // 1. Keep valid custom products or edited products, strictly rejecting obsolete legacy -frame- items
         parsed.forEach(p => {
-          if (!p || !p.id || oldMockIds.has(p.id) || deletedIds.has(p.id) || seenIds.has(p.id)) return;
+          if (!p || !p.id || deletedIds.has(p.id) || seenIds.has(p.id)) return;
+          // Filter out obsolete legacy products whose images were removed
+          if (
+            p.id.includes('-frame-') ||
+            (p.img && (
+              p.img.includes('/images/products/womens/') ||
+              p.img.includes('/images/products/kids/') ||
+              p.img.includes('/images/products/readers/') ||
+              p.img.includes('/images/products/sports/') ||
+              p.img.includes('/images/products/unisex/')
+            ))
+          ) return;
+
           seenIds.add(p.id);
           const isFeat = p.featured !== undefined ? Boolean(p.featured) : Boolean(p.isFeatured);
+          const imgPath = p.img || (initialMap.get(p.id)?.img);
+          const computedHash = getProductImgHash({ ...p, img: imgPath });
+
           if (initialMap.has(p.id)) {
             const orig = initialMap.get(p.id);
             resultList.push({
               ...orig,
               ...p,
-              img: p.img || orig.img,
-              gallery: (p.gallery && p.gallery.length > 0) ? p.gallery : [p.img || orig.img],
+              img: imgPath || orig.img,
+              imgHash: computedHash || orig.imgHash,
+              gallery: (p.gallery && p.gallery.length > 0) ? p.gallery : [imgPath || orig.img],
               featured: isFeat,
               isFeatured: isFeat,
               bestSeller: p.bestSeller !== undefined ? Boolean(p.bestSeller) : isFeat
@@ -48,6 +59,7 @@ class Store {
           } else {
             resultList.push({
               ...p,
+              imgHash: computedHash,
               featured: isFeat,
               isFeatured: isFeat,
               bestSeller: p.bestSeller !== undefined ? Boolean(p.bestSeller) : isFeat
@@ -55,17 +67,21 @@ class Store {
           }
         });
 
-        // 2. Append any INITIAL_PRODUCTS that aren't in saved or deleted (e.g. fresh catalog additions in data.js)
+        // 2. Append all fresh INITIAL_PRODUCTS
         INITIAL_PRODUCTS.forEach(orig => {
-          if (!seenIds.has(orig.id) && !deletedIds.has(orig.id) && !oldMockIds.has(orig.id)) {
+          if (!seenIds.has(orig.id) && !deletedIds.has(orig.id)) {
             seenIds.add(orig.id);
+            orig.imgHash = getProductImgHash(orig) || orig.imgHash;
             resultList.push(orig);
           }
         });
 
         this.products = resultList;
       } else {
-        this.products = INITIAL_PRODUCTS.filter(p => !deletedIds.has(p.id));
+        this.products = INITIAL_PRODUCTS.filter(p => !deletedIds.has(p.id)).map(p => ({
+          ...p,
+          imgHash: getProductImgHash(p) || p.imgHash
+        }));
       }
       this.saveProducts();
     } catch (e) {
@@ -557,13 +573,13 @@ class Store {
     }
   }
 
-  // Fetch live products from Supabase DB (Global cross-device catalog sync)
+  // Fetch live products from Supabase DB (Global cross-device live cloud sync)
   async fetchProductsFromSupabase() {
     try {
       const res = await fetch('/api/get-products');
       if (!res.ok) return;
       const data = await res.json();
-      if (data.success && Array.isArray(data.products)) {
+      if (data.success && Array.isArray(data.products) && data.products.length > 0) {
         const deletedIds = new Set(JSON.parse(localStorage.getItem("lsw_deleted_products") || "[]"));
         
         const dbProds = data.products
@@ -576,6 +592,7 @@ class Store {
             const isFeat = Boolean(p.badge === 'Bestseller' || p.badge === 'Featured' || p.badge === 'Trending' || p.is_featured || p.featured);
             const cat = p.category || p.type || 'eyeglasses';
             const gender = p.gender || 'unisex';
+            const localMatch = this.products.find(x => x.id === p.id);
 
             return {
               id: p.id,
@@ -584,13 +601,14 @@ class Store {
               type: cat,
               category: cat,
               gender: gender,
-              cats: gender === 'unisex' ? ['men', 'women', 'unisex'] : [gender],
+              cats: gender === 'unisex' ? ['men', 'women', 'unisex', cat] : [gender, cat],
               price: Number(p.price || 0),
               mrp: Number(p.original_price || Math.round(Number(p.price || 0) * 1.6)),
               rating: Number(p.rating || 4.9),
               reviews: Number(p.reviews_count || 16),
               badge: p.badge || '',
               img: primaryImg,
+              imgHash: getProductImgHash({ ...p, img: primaryImg }) || localMatch?.imgHash || primaryImg,
               gallery: imgs,
               shape: p.frame_shape || 'Rectangle',
               size: p.frame_size || '50-20-142',
@@ -610,39 +628,11 @@ class Store {
             };
           });
 
-        const dbIdSet = new Set(dbProds.map(p => p.id));
-
-        // Auto-sync any existing custom products in localStorage that are not yet in Supabase
-        const customProdsToPush = this.products.filter(p => {
-          return p && p.id && !dbIdSet.has(p.id) && !deletedIds.has(p.id) && p.id.startsWith('lens-s-world-custom-');
-        });
-
-        if (customProdsToPush.length > 0) {
-          customProdsToPush.forEach(prod => {
-            fetch('/api/save-product', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(prod)
-            }).catch(e => console.warn('Product auto-push notice:', e));
-          });
-        }
-
         if (dbProds.length > 0) {
-          // Merge database products with local products (DB products take precedence at the top)
-          const mergedMap = new Map();
-          dbProds.forEach(p => mergedMap.set(p.id, p));
-
-          // Retain any existing catalog products not in DB
-          this.products.forEach(p => {
-            if (!mergedMap.has(p.id) && !deletedIds.has(p.id)) {
-              mergedMap.set(p.id, p);
-            }
-          });
-
-          this.products = Array.from(mergedMap.values());
+          this.products = dbProds;
           this.saveProducts();
           this.notify("products_updated", this.products);
-          console.log(`✓ Synchronized ${dbProds.length} products from Supabase`);
+          console.log(`✓ Synchronized ${dbProds.length} products live from Supabase DB`);
         }
       }
     } catch (e) {
@@ -685,7 +675,7 @@ class Store {
     }
   }
 
-  updateProduct(productId, updatedFields) {
+  async updateProduct(productId, updatedFields) {
     const idx = this.products.findIndex(p => p.id === productId);
     if (idx > -1) {
       const current = this.products[idx];
@@ -705,6 +695,7 @@ class Store {
         isFeatured: isFeat,
         bestSeller: isFeat,
         img: newImg,
+        imgHash: getProductImgHash({ ...current, ...updatedFields, img: newImg }),
         gallery: newGallery
       };
       this.saveProducts();
@@ -712,15 +703,20 @@ class Store {
       this.notify("products_updated", this.products[idx]);
 
       // Sync updated product to Supabase cloud database
-      fetch('/api/save-product', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(this.products[idx])
-      }).catch(err => console.warn('Supabase product update error:', err));
+      try {
+        await fetch('/api/save-product', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.products[idx])
+        });
+        await this.fetchProductsFromSupabase();
+      } catch (err) {
+        console.warn('Supabase product update error:', err);
+      }
     }
   }
 
-  addProduct(newProduct) {
+  async addProduct(newProduct) {
     const timestamp = Date.now();
     const isFeat = Boolean(newProduct.featured || newProduct.isFeatured);
     const prodImg = newProduct.img || 'https://chashmah.com/wp-content/uploads/2026/08/1001073265_768x768.webp';
@@ -731,6 +727,7 @@ class Store {
       id: newProduct.id || `lens-s-world-${(newProduct.name || 'custom').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${timestamp}`,
       createdAt: timestamp,
       img: prodImg,
+      imgHash: getProductImgHash({ ...newProduct, img: prodImg }),
       gallery: prodGallery,
       featured: isFeat,
       isFeatured: isFeat,
@@ -746,20 +743,25 @@ class Store {
     this.notify("products_updated", productWithId);
 
     // Save product to Supabase cloud database so all devices and phones see it immediately!
-    fetch('/api/save-product', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(productWithId)
-    }).then(res => res.json()).then(data => {
+    try {
+      const res = await fetch('/api/save-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productWithId)
+      });
+      const data = await res.json();
       if (data.success) {
         console.log('✓ Product successfully synced to Supabase Cloud DB:', productWithId.id);
+        await this.fetchProductsFromSupabase();
       }
-    }).catch(err => console.warn('Supabase product add notice:', err));
+    } catch (err) {
+      console.warn('Supabase product add notice:', err);
+    }
 
     return productWithId;
   }
 
-  deleteProduct(productId) {
+  async deleteProduct(productId) {
     this.products = this.products.filter(p => p.id !== productId);
     try {
       const deleted = new Set(JSON.parse(localStorage.getItem("lsw_deleted_products") || "[]"));
@@ -771,11 +773,16 @@ class Store {
     this.notify("products_updated", { id: productId, deleted: true });
 
     // Delete from Supabase cloud database
-    fetch(`/api/delete-product?id=${encodeURIComponent(productId)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: productId })
-    }).catch(err => console.warn('Supabase product delete notice:', err));
+    try {
+      await fetch(`/api/delete-product?id=${encodeURIComponent(productId)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: productId })
+      });
+      await this.fetchProductsFromSupabase();
+    } catch (err) {
+      console.warn('Supabase product delete notice:', err);
+    }
   }
 
   bulkDeleteProducts(productIds) {

@@ -35,13 +35,13 @@ import { getWhatsAppUrl } from '../utils/whatsappHelper';
 const ADMIN_PASSWORD = "Aajkalparso@3";
 
 const SAMPLE_IMAGE_PRESETS = [
-  { label: "Women Blush Pink Cat-Eye", url: "/images/products/womens/women_frame_1.jpg" },
-  { label: "Women Round Acetate", url: "/images/products/womens/women_frame_2.jpg" },
-  { label: "Kids Flexible Eyeglasses", url: "/images/products/kids/kids_frame_1.jpg" },
-  { label: "Polarized Sports Sunglasses", url: "/images/products/sports/sports_frame_1.jpg" },
-  { label: "Unisex Classic Metal", url: "/images/products/unisex/unisex_frame_1.jpg" },
-  { label: "Reading Glasses Precision", url: "/images/products/reading/reading_frame_1.jpg" },
-  { label: "Luxury Studio Unsplash", url: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&w=800&q=80" },
+  { label: "Men's Classic Eyeglasses", url: "/images/products/mens-eyeglasses/mens_eyeglasses_01.png" },
+  { label: "Women's Couture Cat-Eye", url: "/images/products/womens-eyeglasses/womens_eyeglasses_01.png" },
+  { label: "Unisex Studio Round", url: "/images/products/unisex-eyeglasses/unisex_eyeglasses_01.png" },
+  { label: "Kids Flexible Eyewear", url: "/images/products/kids-eyewear/kids_eyewear_01.png" },
+  { label: "Men's Polarized Sunglasses", url: "/images/products/mens-sunglasses/mens_sunglasses_01.png" },
+  { label: "Women's Polarized Sunglasses", url: "/images/products/womens-sunglasses/womens_sunglasses_01.png" },
+  { label: "Sports Wrap Sunglasses", url: "/images/products/sports-sunglasses/sports_sunglasses_01.png" },
   { label: "Vintage Aviator Gold", url: "https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=800&q=80" }
 ];
 

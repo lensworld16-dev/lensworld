@@ -1,5 +1,5 @@
 // LENS S WORLD - Clean UI Components & View Renderer
-import { STORE_INFO, CATEGORIES, GENDER_CATEGORIES, LENS_PACKAGES, PRESCRIPTION_POWER_OPTIONS, COUPONS, ORDER_STATUSES, READER_POWERS } from './data.js';
+import { STORE_INFO, CATEGORIES, GENDER_CATEGORIES, LENS_PACKAGES, PRESCRIPTION_POWER_OPTIONS, COUPONS, ORDER_STATUSES, READER_POWERS, getProductImgHash } from './data.js';
 import { store } from './store.js';
 import { getWhatsAppUrl, getProductEnquiryUrl, formatOrderForWhatsApp } from './whatsapp.js';
 
@@ -77,19 +77,19 @@ export const UI = {
 
   // Render Home Page
   renderHomePage() {
-    const getFeaturedItems = (catType, limit = 4) => {
-      const allInCat = store.products.filter(p => p.type === catType || (p.cats && p.cats.includes(catType)));
-      const sorted = [...allInCat].sort((a, b) => {
-        const aTime = a.createdAt || (a.id && a.id.startsWith('lens-s-world-') && a.id.split('-').pop()) || 0;
-        const bTime = b.createdAt || (b.id && b.id.startsWith('lens-s-world-') && b.id.split('-').pop()) || 0;
-        if (aTime && bTime && aTime !== bTime) return Number(bTime) - Number(aTime);
-        const aFeat = Boolean(a.isFeatured || a.featured || a.bestSeller);
-        const bFeat = Boolean(b.isFeatured || b.featured || b.bestSeller);
-        if (aFeat && !bFeat) return -1;
-        if (!aFeat && bFeat) return 1;
-        return 0;
-      });
-      return sorted.slice(0, limit);
+    const getFeaturedItems = (catType, limit = 8) => {
+      const allInCat = store.products.filter(p => p.type === catType);
+      const seenImages = new Set();
+      const uniqueItems = [];
+      for (const p of allInCat) {
+        const key = getProductImgHash(p) || p.imgHash || p.img;
+        if (key && !seenImages.has(key)) {
+          seenImages.add(key);
+          uniqueItems.push(p);
+          if (uniqueItems.length === limit) break;
+        }
+      }
+      return uniqueItems;
     };
 
     const getRecentAndFeatured = (limit = 12) => {
@@ -112,8 +112,8 @@ export const UI = {
     const recentAndFeatured = getRecentAndFeatured(12);
     window.__recentAndFeaturedProds = recentAndFeatured;
 
-    const featuredEyeglasses = getFeaturedItems('eyeglasses', 4);
-    const featuredSunglasses = getFeaturedItems('sunglasses', 4);
+    const featuredEyeglasses = getFeaturedItems('eyeglasses', 8);
+    const featuredSunglasses = getFeaturedItems('sunglasses', 8);
     const featuredReaders = getFeaturedItems('reading-glasses', 4);
     const featuredPowerSpecs = getFeaturedItems('power-specs', 4);
     const featuredContacts = getFeaturedItems('contact-lenses', 4);
@@ -188,36 +188,6 @@ export const UI = {
         </div>
       </section>
 
-      <!-- ✨ New Arrivals & Trending Eyewear Showcase (Newly Added Products Appear Right Here!) -->
-      <section class="featured-showcase-section">
-        <div class="container">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.85rem; gap:0.5rem;">
-            <h2 style="font-size:clamp(1.05rem, 3.8vw, 1.35rem); font-weight:800; color:#000040; margin:0; white-space:nowrap; display:flex; align-items:center; gap:0.35rem;">
-              <span>✨ New Arrivals</span>
-            </h2>
-            <a href="#shop?tag=new" style="font-size:0.8rem; font-weight:700; color:#000040; text-decoration:none; background:#ffffff; border:1px solid #cbd5e1; padding:0.32rem 0.65rem; border-radius:6px; white-space:nowrap; flex-shrink:0;">
-              View All (${recentAndFeatured.length}) →
-            </a>
-          </div>
-
-          <!-- Interactive Category Filter Tabs -->
-          <div class="home-filter-tabs">
-            <button type="button" class="home-tab-chip active" onclick="window.filterHomeShowcase('all', this)">All Eyewear (${recentAndFeatured.length})</button>
-            <button type="button" class="home-tab-chip" onclick="window.filterHomeShowcase('eyeglasses', this)">Eyeglasses (${recentAndFeatured.filter(p => p.type === 'eyeglasses').length})</button>
-            <button type="button" class="home-tab-chip" onclick="window.filterHomeShowcase('sunglasses', this)">Sunglasses (${recentAndFeatured.filter(p => p.type === 'sunglasses').length})</button>
-            <button type="button" class="home-tab-chip" onclick="window.filterHomeShowcase('reading-glasses', this)">Readers (${recentAndFeatured.filter(p => p.type === 'reading-glasses').length})</button>
-            ${recentAndFeatured.some(p => p.type === 'power-specs') ? `<button type="button" class="home-tab-chip" onclick="window.filterHomeShowcase('power-specs', this)">Power Specs (${recentAndFeatured.filter(p => p.type === 'power-specs').length})</button>` : ''}
-            ${recentAndFeatured.some(p => p.type === 'contact-lenses') ? `<button type="button" class="home-tab-chip" onclick="window.filterHomeShowcase('contact-lenses', this)">Contact Lens (${recentAndFeatured.filter(p => p.type === 'contact-lenses').length})</button>` : ''}
-            ${recentAndFeatured.some(p => p.type === 'accessories') ? `<button type="button" class="home-tab-chip" onclick="window.filterHomeShowcase('accessories', this)">Accessories (${recentAndFeatured.filter(p => p.type === 'accessories').length})</button>` : ''}
-          </div>
-
-          <!-- Product Cards Grid -->
-          <div class="products-grid" id="home-showcase-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:1.25rem;">
-            ${recentAndFeatured.slice(0, 4).map(p => this.renderProductCard(p)).join('')}
-          </div>
-        </div>
-      </section>
-
       <!-- 1. Eyeglasses Section (5 Demographic Cards + 4 Featured Products) -->
       <section class="demographic-section" style="padding-bottom: 2rem;">
         <div class="container">
@@ -265,9 +235,9 @@ export const UI = {
             </a>
           </div>
 
-          <!-- 4 Featured Eyeglasses Live Products -->
+          <!-- 8 Featured Eyeglasses Live Products (Mobile & Laptop 8 Items) -->
           <div style="margin-top: 1.5rem;">
-            <div class="products-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:1.25rem;">
+            <div class="products-grid">
               ${featuredEyeglasses.map(p => this.renderProductCard(p)).join('')}
             </div>
           </div>
@@ -335,9 +305,9 @@ export const UI = {
             </a>
           </div>
 
-          <!-- 4 Featured Sunglasses Live Products -->
+          <!-- 8 Featured Sunglasses Live Products (Mobile & Laptop 8 Items) -->
           <div style="margin-top: 1.5rem;">
-            <div class="products-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:1.25rem;">
+            <div class="products-grid">
               ${featuredSunglasses.map(p => this.renderProductCard(p)).join('')}
             </div>
           </div>
@@ -347,13 +317,13 @@ export const UI = {
       <!-- 3. Reading Glasses Section (4 Featured Products) -->
       <section class="featured-readers-section" style="padding: 1.5rem 0 2.5rem 0; border-top: 1px solid #f1f5f9;">
         <div class="container">
-          <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:1.25rem;">
-            <div>
-              <span style="font-size:0.75rem; font-weight:800; color:#9333ea; text-transform:uppercase; letter-spacing:0.06em; display:block; margin-bottom:0.25rem;">Instant Power Glasses (+1.00 to +3.00)</span>
-              <h2 style="font-size:1.4rem; font-weight:800; color:#000040; margin:0;">Reading Glasses Collection</h2>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; gap:0.5rem; flex-wrap:nowrap;">
+            <div style="min-width:0;">
+              <span style="font-size:0.7rem; font-weight:800; color:#9333ea; text-transform:uppercase; letter-spacing:0.04em; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Power (+1.00 to +3.00)</span>
+              <h2 style="font-size:clamp(1.1rem, 3.8vw, 1.35rem); font-weight:800; color:#000040; margin:0; white-space:nowrap;">Reading Glasses</h2>
             </div>
-            <a href="#shop?category=reading-glasses" style="font-size:0.82rem; font-weight:700; color:#000040; text-decoration:none; display:flex; align-items:center; gap:0.25rem;">
-              View All Readers (${store.products.filter(p => p.type === 'reading-glasses').length}) →
+            <a href="#shop?category=reading-glasses" style="font-size:0.8rem; font-weight:700; color:#000040; text-decoration:none; display:flex; align-items:center; gap:0.25rem; white-space:nowrap; flex-shrink:0;">
+              View All (${store.products.filter(p => p.type === 'reading-glasses').length}) →
             </a>
           </div>
           <div class="products-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:1.25rem;">

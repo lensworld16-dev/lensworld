@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { PRODUCTS_DATA, COUPONS } from '../data/productsData';
+import { PRODUCTS_DATA, COUPONS, CATALOG_VERSION } from '../data/productsData';
 import { supabase } from '../utils/supabaseClient';
 
 const ShopContext = createContext();
@@ -143,14 +143,31 @@ export function ShopProvider({ children }) {
   // Products state (synchronized with PRODUCTS_DATA, custom added products and admin edits)
   const [products, setProducts] = useState(() => {
     try {
+      const storedVersion = localStorage.getItem("lsw_catalog_version");
+      if (storedVersion !== CATALOG_VERSION) {
+        localStorage.setItem("lsw_catalog_version", CATALOG_VERSION);
+        localStorage.removeItem("lsw_products");
+        localStorage.removeItem("lsw_deleted_products");
+        return PRODUCTS_DATA;
+      }
       const deletedIds = new Set(JSON.parse(localStorage.getItem("lsw_deleted_products") || "[]"));
       const saved = localStorage.getItem("lsw_products");
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           const baseProductIds = new Set(PRODUCTS_DATA.map(p => p.id));
-          // Custom products added by admin
-          const customProducts = parsed.filter(p => p && p.id && !baseProductIds.has(p.id) && !deletedIds.has(p.id));
+          // Only true custom products added by admin (excluding obsolete legacy -frame- IDs and deleted paths)
+          const customProducts = parsed.filter(p => 
+            p && p.id && 
+            !baseProductIds.has(p.id) && 
+            !deletedIds.has(p.id) &&
+            !p.id.includes('-frame-') &&
+            !p.img?.includes('/images/products/womens/') &&
+            !p.img?.includes('/images/products/kids/') &&
+            !p.img?.includes('/images/products/readers/') &&
+            !p.img?.includes('/images/products/sports/') &&
+            !p.img?.includes('/images/products/unisex/')
+          );
           // Merge base products with any edits in localStorage
           const mergedBase = PRODUCTS_DATA.filter(p => !deletedIds.has(p.id)).map(baseProd => {
             const match = parsed.find(p => p && p.id === baseProd.id);
@@ -212,10 +229,43 @@ export function ShopProvider({ children }) {
     setTimeout(() => setToast(null), 3500);
   };
 
+  // Self-healing check: instantly replace state if obsolete legacy image paths exist or catalog version mismatch
+  useEffect(() => {
+    const storedVersion = localStorage.getItem("lsw_catalog_version");
+    const hasObsoleteImages = products.some(p => 
+      p.id?.includes('-frame-') ||
+      (p.img && (
+        p.img.includes('/images/products/womens/') ||
+        p.img.includes('/images/products/kids/') ||
+        p.img.includes('/images/products/readers/') ||
+        p.img.includes('/images/products/sports/') ||
+        p.img.includes('/images/products/unisex/')
+      ))
+    );
+    if (storedVersion !== CATALOG_VERSION || hasObsoleteImages) {
+      localStorage.setItem("lsw_catalog_version", CATALOG_VERSION);
+      localStorage.removeItem("lsw_products");
+      localStorage.removeItem("lsw_deleted_products");
+      setProducts(PRODUCTS_DATA);
+    }
+  }, [products]);
+
   // Sync products to local storage
   useEffect(() => {
     try {
-      localStorage.setItem("lsw_products", JSON.stringify(products));
+      const hasObsolete = products.some(p => 
+        p.id?.includes('-frame-') ||
+        (p.img && (
+          p.img.includes('/images/products/womens/') ||
+          p.img.includes('/images/products/kids/') ||
+          p.img.includes('/images/products/readers/') ||
+          p.img.includes('/images/products/sports/') ||
+          p.img.includes('/images/products/unisex/')
+        ))
+      );
+      if (!hasObsolete) {
+        localStorage.setItem("lsw_products", JSON.stringify(products));
+      }
     } catch (e) {
       console.error(e);
     }

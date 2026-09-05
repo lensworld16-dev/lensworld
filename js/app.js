@@ -1415,7 +1415,7 @@ window.previewProductImageUpload = function(event) {
   reader.readAsDataURL(file);
 };
 
-window.saveProductForm = function(event) {
+window.saveProductForm = async function(event) {
   event.preventDefault();
 
   const editId = document.getElementById('p-edit-id').value;
@@ -1483,9 +1483,9 @@ window.saveProductForm = function(event) {
   };
 
   if (editId) {
-    store.updateProduct(editId, productData);
+    await store.updateProduct(editId, productData);
   } else {
-    store.addProduct(productData);
+    await store.addProduct(productData);
   }
 
   document.getElementById('admin-product-modal').style.display = 'none';
@@ -1507,9 +1507,9 @@ window.filterHomeShowcase = function(cat, btn) {
   }
 };
 
-window.deleteProductAdmin = function(productId) {
+window.deleteProductAdmin = async function(productId) {
   if (confirm('Are you sure you want to delete this product?')) {
-    store.deleteProduct(productId);
+    await store.deleteProduct(productId);
     const mainApp = document.getElementById('app-main');
     if (mainApp) mainApp.innerHTML = UI.renderAdminDashboard('products');
   }
