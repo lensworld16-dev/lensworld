@@ -117,10 +117,16 @@ class Store {
     try {
       const saved = localStorage.getItem("lsw_categories");
       if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.some(c => c.key === 'lenses-guide') || !parsed.some(c => c.key === 'power-specs')) {
-          this.categories = CATEGORIES;
-          localStorage.setItem("lsw_categories", JSON.stringify(CATEGORIES));
+        let parsed = JSON.parse(saved);
+        if (parsed.some(c => c.key === 'lenses-guide') || !parsed.some(c => c.key === 'clip-on') || !parsed.some(c => c.key === 'meta-ai')) {
+          CATEGORIES.forEach(cat => {
+            if (!parsed.some(c => c.key === cat.key)) {
+              parsed.push(cat);
+            }
+          });
+          parsed = parsed.filter(c => c.key !== 'lenses-guide');
+          this.categories = parsed;
+          localStorage.setItem("lsw_categories", JSON.stringify(this.categories));
         } else {
           this.categories = parsed;
         }

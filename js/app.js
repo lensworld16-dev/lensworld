@@ -1279,6 +1279,8 @@ window.openProductModal = function(productId = null) {
   const descEl = document.getElementById('p-desc');
   const previewImg = document.getElementById('p-preview-thumb');
   const previewText = document.getElementById('p-preview-text');
+  const extraContainer = document.getElementById('p-extra-images-list');
+  if (extraContainer) extraContainer.innerHTML = '';
 
   if (productId) {
     const product = store.products.find(p => p.id === productId);
@@ -1293,6 +1295,18 @@ window.openProductModal = function(productId = null) {
     priceEl.value = product.price || '';
     mrpEl.value = product.mrp || '';
     imgEl.value = product.img || '';
+
+    // Populate extra gallery images (2nd, 3rd, etc.)
+    const rawGallery = Array.isArray(product.gallery) && product.gallery.length > 0
+      ? product.gallery
+      : (Array.isArray(product.images) && product.images.length > 0 ? product.images : [product.img]);
+    if (rawGallery.length > 1) {
+      rawGallery.slice(1).forEach(url => {
+        if (url && url !== product.img) {
+          window.addExtraImageInput(url);
+        }
+      });
+    }
     if (featuredEl) featuredEl.checked = product.featured !== false;
     if (isNewEl) isNewEl.checked = product.isNew === true || (product.badge || '').toLowerCase().includes('new');
     if (isTrendingEl) isTrendingEl.checked = product.isTrending === true || product.trending === true || (product.badge || '').toLowerCase().includes('trend');
@@ -1369,6 +1383,128 @@ window.openProductModal = function(productId = null) {
   modal.style.display = 'flex';
 };
 
+window.switchPdpImage = function(url, btn) {
+  const mainImg = document.getElementById('detail-img-view');
+  if (mainImg && url) {
+    mainImg.src = url;
+  }
+  if (btn) {
+    document.querySelectorAll('.pdp-thumb-item').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+};
+
+window.addExtraImageInput = function(url = '') {
+  const container = document.getElementById('p-extra-images-list');
+  if (!container) return;
+
+  const row = document.createElement('div');
+  row.className = 'p-extra-img-row';
+  row.style.cssText = 'display:flex; align-items:center; gap:0.5rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.5rem;';
+  
+  const id = 'extra_img_' + Math.random().toString(36).substring(2, 9);
+  row.innerHTML = `
+    <div style="width:36px; height:36px; border-radius:4px; border:1px solid #e2e8f0; overflow:hidden; background:#f1f5f9; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+      <img src="${url}" class="p-extra-thumb" style="width:100%; height:100%; object-fit:contain; display:${url ? 'block' : 'none'};" onerror="this.style.display='none'" />
+      <span class="p-extra-thumb-empty" style="font-size:0.65rem; color:#94a3b8; display:${url ? 'none' : 'block'};">📷</span>
+    </div>
+    <input type="text" class="admin-input p-extra-img-val" placeholder="https://... extra image URL" value="${url}" style="flex:1; height:32px; font-size:0.78rem;" oninput="window.previewSingleExtraImg(this)" />
+    <input type="file" accept="image/*" id="${id}_file" style="display:none;" onchange="window.uploadSingleExtraFile(event, this)" />
+    <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('${id}_file').click()" style="height:32px; padding:0 0.5rem; font-size:0.75rem;" title="Upload photo">📁</button>
+    <button type="button" class="btn btn-outline btn-sm" onclick="this.closest('.p-extra-img-row').remove()" style="height:32px; padding:0 0.5rem; font-size:0.75rem; color:#ef4444; border-color:#fca5a5;" title="Remove image">🗑️</button>
+  `;
+  container.appendChild(row);
+};
+
+window.previewSingleExtraImg = function(input) {
+  const row = input.closest('.p-extra-img-row');
+  if (!row) return;
+  const thumb = row.querySelector('.p-extra-thumb');
+  const empty = row.querySelector('.p-extra-thumb-empty');
+  if (input.value.trim()) {
+    thumb.src = input.value.trim();
+    thumb.style.display = 'block';
+    empty.style.display = 'none';
+  } else {
+    thumb.style.display = 'none';
+    empty.style.display = 'block';
+  }
+};
+
+window.uploadSingleExtraFile = function(event, fileInput) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const rawData = e.target.result;
+    const img = new Image();
+    img.onload = function() {
+      const maxDim = 800;
+      let width = img.width, height = img.height;
+      if (width > height && width > maxDim) {
+        height = Math.round((height * maxDim) / width);
+        width = maxDim;
+      } else if (height > maxDim) {
+        width = Math.round((width * maxDim) / height);
+        height = maxDim;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      const compressed = canvas.toDataURL('image/jpeg', 0.82);
+      const row = fileInput.closest('.p-extra-img-row');
+      if (row) {
+        const valInput = row.querySelector('.p-extra-img-val');
+        valInput.value = compressed;
+        window.previewSingleExtraImg(valInput);
+      }
+    };
+    img.onerror = () => {
+      const row = fileInput.closest('.p-extra-img-row');
+      if (row) {
+        const valInput = row.querySelector('.p-extra-img-val');
+        valInput.value = rawData;
+        window.previewSingleExtraImg(valInput);
+      }
+    };
+    img.src = rawData;
+  };
+  reader.readAsDataURL(file);
+};
+
+window.uploadExtraImages = function(event) {
+  const files = Array.from(event.target.files || []);
+  if (files.length === 0) return;
+
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const rawData = e.target.result;
+      const img = new Image();
+      img.onload = function() {
+        const maxDim = 800;
+        let width = img.width, height = img.height;
+        if (width > height && width > maxDim) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else if (height > maxDim) {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL('image/jpeg', 0.82);
+        window.addExtraImageInput(compressed);
+      };
+      img.onerror = () => window.addExtraImageInput(rawData);
+      img.src = rawData;
+    };
+    reader.readAsDataURL(file);
+  });
+  event.target.value = '';
+};
+
 window.previewProductImageUpload = function(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -1427,6 +1563,11 @@ window.saveProductForm = async function(event) {
   const price = parseFloat(document.getElementById('p-price').value);
   const mrp = parseFloat(document.getElementById('p-mrp').value) || Math.round(price * 1.6);
   const img = document.getElementById('p-img').value.trim() || 'https://chashmah.com/wp-content/uploads/2026/08/1001073265_768x768.webp';
+  const extraInputs = document.querySelectorAll('.p-extra-img-val');
+  const extraImgs = Array.from(extraInputs).map(inp => inp.value.trim()).filter(Boolean);
+  const finalGallery = [img, ...extraImgs].filter(Boolean);
+  const primaryImg = finalGallery[0] || img;
+
   const featured = document.getElementById('p-featured')?.checked !== false;
   const isNew = document.getElementById('p-is-new')?.checked === true;
   const isTrending = document.getElementById('p-is-trending')?.checked === true;
@@ -1457,7 +1598,7 @@ window.saveProductForm = async function(event) {
     type,
     category: type,
     gender,
-    cats: gender === 'unisex' ? ['men', 'women', 'unisex'] : [gender],
+    cats: gender === 'unisex' ? ['men', 'women', 'unisex', type] : [gender, type],
     badge: badge || (isNew ? 'New' : (isTrending ? 'Trending' : '')),
     featured,
     isFeatured: featured,
@@ -1467,8 +1608,8 @@ window.saveProductForm = async function(event) {
     trending: isTrending,
     price,
     mrp,
-    img,
-    gallery: [img],
+    img: primaryImg,
+    gallery: finalGallery.length > 0 ? finalGallery : [primaryImg],
     lensOptionsAvailable,
     prescriptionAvailable: lensOptionsAvailable,
     frameOnlyAvailable: true,

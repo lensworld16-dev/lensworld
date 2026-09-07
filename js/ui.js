@@ -303,6 +303,13 @@ export const UI = {
               </div>
               <span class="demo-label">Sports</span>
             </a>
+
+            <a href="#shop?category=sunglasses&tag=meta-ai" class="demo-card">
+              <div class="demo-thumb-box contain-img">
+                <img src="${store.getCatImg('sun_meta_ai', 'images/meta_ai_sunglasses.jpg')}" alt="Meta AI Sunglasses" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1508296695146-257a814070b4?auto=format&fit=crop&w=768&q=80';" />
+              </div>
+              <span class="demo-label">Meta AI</span>
+            </a>
           </div>
 
           <!-- 8 Featured Sunglasses Live Products (Mobile & Laptop 8 Items) -->
@@ -471,6 +478,12 @@ export const UI = {
         filtered = filtered.filter(p => p.type === 'power-specs' || p.type === 'reading-glasses');
       } else if (category === 'reading-glasses') {
         filtered = filtered.filter(p => p.type === 'reading-glasses' || p.type === 'power-specs');
+      } else if (category === 'clip-on') {
+        filtered = filtered.filter(p => p.type === 'clip-on' || p.category === 'clip-on' || (p.tags && p.tags.includes('clip-on')) || (p.cats && p.cats.includes('clip-on')) || (p.name && p.name.toLowerCase().includes('clip')));
+      } else if (category === 'meta-ai') {
+        filtered = filtered.filter(p => p.type === 'meta-ai' || p.category === 'meta-ai' || (p.tags && p.tags.includes('meta-ai')) || (p.cats && p.cats.includes('meta-ai')) || (p.name && p.name.toLowerCase().includes('meta')));
+      } else if (category === 'sunglasses') {
+        filtered = filtered.filter(p => p.type === 'sunglasses' || p.type === 'clip-on' || p.type === 'meta-ai' || p.category === 'sunglasses' || (p.cats && p.cats.includes('sunglasses')));
       } else {
         filtered = filtered.filter(p => p.type === category || p.category === category || (p.cats && p.cats.includes(category)));
       }
@@ -490,6 +503,8 @@ export const UI = {
       filtered = filtered.filter(p => 
         (tagLower === 'new' && (p.isNew === true || (p.badge && p.badge.toLowerCase().includes('new')))) ||
         (tagLower === 'trending' && (p.isTrending === true || p.trending === true || (p.badge && p.badge.toLowerCase().includes('trend')))) ||
+        (tagLower === 'meta-ai' && (p.type === 'meta-ai' || (p.tags && p.tags.includes('meta-ai')) || (p.cats && p.cats.includes('meta-ai')) || (p.name && p.name.toLowerCase().includes('meta')))) ||
+        (tagLower === 'clip-on' && (p.type === 'clip-on' || (p.tags && p.tags.includes('clip-on')) || (p.cats && p.cats.includes('clip-on')) || (p.name && p.name.toLowerCase().includes('clip')))) ||
         (p.tags && p.tags.some(t => t.toLowerCase().includes(tagLower))) ||
         (p.cats && p.cats.some(c => c.toLowerCase().includes(tagLower))) ||
         (p.gender && p.gender.toLowerCase().includes(tagLower)) ||
@@ -593,7 +608,12 @@ export const UI = {
 
     const isWishlisted = store.isInWishlist(product.id);
     const discount = this.getDiscount(product.price, product.mrp);
-    const gallery = (product.gallery && product.gallery.length > 0 && product.gallery[0] === product.img) ? product.gallery : [product.img];
+    const rawGallery = Array.isArray(product.gallery) && product.gallery.length > 0 
+      ? product.gallery.filter(Boolean)
+      : (Array.isArray(product.images) && product.images.length > 0
+        ? product.images.filter(Boolean)
+        : [product.img].filter(Boolean));
+    const gallery = rawGallery.length > 0 ? rawGallery : ['https://chashmah.com/wp-content/uploads/2026/08/1001073265_768x768.webp'];
 
     const sizeParts = (product.size || '52-18-140').toString().split(/[^0-9]+/).filter(Boolean);
     const lensWidth = sizeParts[0] || '52';
@@ -625,6 +645,19 @@ export const UI = {
                 </svg>
               </button>
             </div>
+
+            <!-- Extra Images Thumbnail Strip: Only show if 2 or 3+ images exist -->
+            ${gallery.length > 1 ? `
+              <div class="pdp-thumbnails-strip">
+                ${gallery.map((imgUrl, idx) => `
+                  <button type="button" class="pdp-thumb-item ${idx === 0 ? 'active' : ''}" 
+                          onclick="window.switchPdpImage('${imgUrl}', this)" 
+                          title="View image angle ${idx + 1}">
+                    <img src="${imgUrl}" alt="${product.name} ${idx + 1}" onerror="this.onerror=null; this.src='https://chashmah.com/wp-content/uploads/2026/08/1001073265_768x768.webp';" />
+                  </button>
+                `).join('')}
+              </div>
+            ` : ''}
           </div>
 
           <!-- Right Column: Product Details & Purchase Actions (Compact & Systematic) -->
@@ -2074,6 +2107,8 @@ export const UI = {
                     <option value="">Move To...</option>
                     <option value="eyeglasses">👓 Eyeglasses</option>
                     <option value="sunglasses">🕶️ Sunglasses</option>
+                    <option value="clip-on">📎 Clip-on</option>
+                    <option value="meta-ai">🤖 Meta AI Sunglasses</option>
                     <option value="reading-glasses">📖 Reading Glasses</option>
                     <option value="power-specs">⚡ Power Specs</option>
                     <option value="contact-lenses">👁️ Contact Lenses</option>
@@ -2621,7 +2656,7 @@ export const UI = {
               <!-- Section C: Sunglasses Demographic & Collection Model Photos -->
               <div>
                 <h4 style="color:#000040; font-size:0.95rem; margin-bottom:0.75rem; border-bottom:1px solid #e2e8f0; padding-bottom:0.4rem;">
-                  3. Sunglasses Grid (Men, Women, Kids, Unisex, Couple, Clip-on, Sports)
+                  3. Sunglasses Grid (Men, Women, Kids, Unisex, Couple, Clip-on, Sports, Meta AI)
                 </h4>
                 <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:1rem;">
                   ${[
@@ -2631,7 +2666,8 @@ export const UI = {
                     { id: 'sun_unisex', label: '👥 Unisex Sunglasses' },
                     { id: 'sun_couple', label: '💑 Couple Sunglasses' },
                     { id: 'sun_clipon', label: '📎 Clip-on Sunglasses' },
-                    { id: 'sun_sports', label: '🚴 Sports Sunglasses' }
+                    { id: 'sun_sports', label: '🚴 Sports Sunglasses' },
+                    { id: 'sun_meta_ai', label: '🤖 Meta AI Sunglasses' }
                   ].map(c => `
                     <div class="admin-card-inner" style="background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem; text-align:center;">
                       <label class="admin-lbl" style="font-weight:700; color:#000040; margin-bottom:0.4rem; display:block;">${c.label}</label>
@@ -2717,16 +2753,35 @@ export const UI = {
               </div>
 
               <div>
-                <label class="admin-lbl">Product Image (URL or File Upload)</label>
+                <label class="admin-lbl">Main / Front Photo (URL or Upload) *</label>
                 <div style="display:flex; gap:0.5rem; margin-bottom:0.4rem;">
                   <input type="text" id="p-img" placeholder="https://... or upload below" class="admin-input" style="flex:1;" />
                   <input type="file" id="p-file-input" accept="image/*" style="display:none;" onchange="window.previewProductImageUpload(event)" />
                   <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('p-file-input').click()">📁 Upload Photo</button>
                 </div>
-                <div id="p-img-preview-box" style="width:100%; height:120px; border:1px dashed #cbd5e1; border-radius:8px; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#f8fafc;">
+                <div id="p-img-preview-box" style="width:100%; height:110px; border:1px dashed #cbd5e1; border-radius:8px; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#f8fafc; margin-bottom:0.75rem;">
                   <img id="p-preview-thumb" src="" style="max-height:100%; max-width:100%; object-fit:contain; display:none;" />
-                  <span id="p-preview-text" style="color:#94a3b8; font-size:0.8rem;">Image preview will appear here</span>
+                  <span id="p-preview-text" style="color:#94a3b8; font-size:0.8rem;">Main photo preview</span>
                 </div>
+
+                <!-- Extra Product Images (Multi-Image Gallery Support) -->
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:0.75rem;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem; flex-wrap:wrap; gap:0.5rem;">
+                    <div>
+                      <span style="font-weight:700; color:#000040; font-size:0.82rem; display:block;">📸 Extra Photos / Side Angles (Gallery)</span>
+                      <small style="color:#64748b; font-size:0.7rem;">Agar 1 photo hai to 1 hi dikhegi. Agar 2 ya 3 photos add karoge to gallery thumbnails show honge.</small>
+                    </div>
+                    <div style="display:flex; gap:0.4rem;">
+                      <input type="file" id="p-extra-files-input" accept="image/*" multiple style="display:none;" onchange="window.uploadExtraImages(event)" />
+                      <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('p-extra-files-input').click()" style="font-size:0.72rem; padding:0.25rem 0.6rem;">📁 Upload Extra Photos</button>
+                      <button type="button" class="btn btn-navy btn-sm" onclick="window.addExtraImageInput('')" style="font-size:0.72rem; padding:0.25rem 0.6rem;">+ Add URL</button>
+                    </div>
+                  </div>
+                  <div id="p-extra-images-list" style="display:flex; flex-direction:column; gap:0.45rem;">
+                    <!-- Dynamically populated extra image rows -->
+                  </div>
+                </div>
+              </div>
               <!-- Color Variants Selection -->
               <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:0.75rem;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.45rem;">

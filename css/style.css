@@ -610,7 +610,7 @@ input, select, textarea {
 
 .demographic-grid-sunglasses {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(8, 1fr);
   gap: 0.75rem;
 }
 
@@ -1901,6 +1901,58 @@ input, select, textarea {
   height: 100%;
   object-fit: contain !important;
   transition: transform 0.3s ease;
+}
+
+/* Multi-Image Gallery Thumbnail Strip */
+.pdp-thumbnails-strip {
+  display: flex;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+  overflow-x: auto;
+  padding: 4px 2px;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pdp-thumb-item {
+  width: 68px;
+  height: 68px;
+  border-radius: 8px;
+  border: 2px solid #e2e8f0;
+  background: #ffffff;
+  padding: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.pdp-thumb-item:hover {
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+}
+
+.pdp-thumb-item.active {
+  border-color: #000040 !important;
+  box-shadow: 0 0 0 1px #000040, 0 3px 8px rgba(0, 0, 64, 0.15);
+}
+
+.pdp-thumb-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+@media (max-width: 768px) {
+  .pdp-thumb-item {
+    width: 58px;
+    height: 58px;
+    padding: 3px;
+  }
 }
 
 .pdp-floating-badge {

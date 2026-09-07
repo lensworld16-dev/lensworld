@@ -207,6 +207,24 @@ export default function ProductDetailPage({
             </div>
           </div>
 
+          {/* Thumbnails Strip - Only displayed if 2 or more images exist */}
+          {gallery.length > 1 && (
+            <div className="flex gap-2.5 overflow-x-auto py-1">
+              {gallery.map((imgUrl, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setActiveImage(imgUrl)}
+                  className={`w-16 h-16 rounded-xl border-2 overflow-hidden shrink-0 bg-white p-1 transition ${
+                    activeImage === imgUrl ? 'border-teal-700 shadow-md ring-1 ring-teal-700' : 'border-slate-200 hover:border-slate-400'
+                  }`}
+                  title={`View angle ${idx + 1}`}
+                >
+                  <img src={imgUrl} alt={`${product.name} ${idx + 1}`} className="w-full h-full object-contain" />
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Specifications Box Tailored to Category */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">

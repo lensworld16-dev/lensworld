@@ -398,6 +398,8 @@ export const CATEGORIES = [
   { key: "all", label: "All Eyewear" },
   { key: "eyeglasses", label: "Eyeglasses" },
   { key: "sunglasses", label: "Sunglasses" },
+  { key: "clip-on", label: "Clip-on" },
+  { key: "meta-ai", label: "Meta AI Sunglasses" },
   { key: "power-specs", label: "Power Specs" },
   { key: "contact-lenses", label: "Contact Lens" },
   { key: "reading-glasses", label: "Readers" },
@@ -463,6 +465,7 @@ export const DEFAULT_CATEGORY_IMAGES = {
   sun_couple: "/images/couple_eyewear_model.jpg",
   sun_clipon: "/images/clipon_sunglasses_model.jpg",
   sun_sports: "https://images.unsplash.com/photo-1508296695146-257a814070b4?auto=format&fit=crop&w=768&q=80",
+  sun_meta_ai: "/images/meta_ai_sunglasses.jpg",
 
   // Mobile Promo Banners
   banner_new_arrival: "https://chashmah.com/wp-content/uploads/2024/05/IMG20240502181046.webp",
@@ -637,6 +640,114 @@ export const READER_POWERS = [
 
 // Only Lens Products in Default Catalog (All other categories ready for fresh admin upload)
 export const INITIAL_PRODUCTS = [
+  {
+    "id": "lens-s-world-meta-ai-smart-sunglasses",
+    "name": "LENS S WORLD Meta AI Smart Audio Sunglasses",
+    "type": "sunglasses",
+    "category": "sunglasses",
+    "gender": "unisex",
+    "cats": [
+      "sunglasses",
+      "meta-ai",
+      "unisex",
+      "men",
+      "women"
+    ],
+    "tags": [
+      "meta-ai",
+      "smart-glasses",
+      "sunglasses",
+      "audio"
+    ],
+    "shape": "Wayfarer",
+    "img": "/images/meta_ai_sunglasses.jpg",
+    "gallery": [
+      "/images/meta_ai_sunglasses.jpg",
+      "https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&w=800&q=80"
+    ],
+    "color": "Matte Black",
+    "colors": [
+      "Matte Black"
+    ],
+    "material": "High-Tech Composite Acetate with Integrated Audio",
+    "price": 3499,
+    "mrp": 5999,
+    "brand": "LENS S WORLD",
+    "sku": "LSW-META-01",
+    "stock": 15,
+    "rating": 5.0,
+    "reviews": 42,
+    "isNew": true,
+    "bestSeller": true,
+    "size": "Medium (50-20-145)",
+    "weight": "28g",
+    "description": "Next-generation smart eyewear engineered with discrete open-ear audio temples, hands-free assistant compatibility, and UV400 polarized dark lenses for unparalleled style and smart convenience.",
+    "features": [
+      "Built-in Open-Ear Audio Temples with Touch Controls",
+      "Integrated Hands-Free Voice Assistant Architecture",
+      "Polarized UV400 Category 3 Sun Protection",
+      "Magnetic Rapid Charging Case & Lens Cloth Included"
+    ],
+    "frameOnlyAvailable": true,
+    "prescriptionAvailable": true,
+    "lensOptionsAvailable": true,
+    "imgHash": "meta_ai_smart_sunglasses_01"
+  },
+  {
+    "id": "lens-s-world-magnetic-clipon-sunglasses",
+    "name": "LENS S WORLD 2-in-1 Magnetic Clip-On Sunglasses",
+    "type": "clip-on",
+    "category": "clip-on",
+    "gender": "unisex",
+    "cats": [
+      "clip-on",
+      "sunglasses",
+      "unisex",
+      "men",
+      "women"
+    ],
+    "tags": [
+      "clip-on",
+      "sunglasses",
+      "magnetic",
+      "polarized"
+    ],
+    "shape": "Rectangle",
+    "img": "/images/clipon_sunglasses_model.jpg",
+    "gallery": [
+      "/images/clipon_sunglasses_model.jpg",
+      "https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&w=800&q=80"
+    ],
+    "color": "Black & Gunmetal",
+    "colors": [
+      "Black & Gunmetal",
+      "Tortoise Brown"
+    ],
+    "material": "TR90 Flex with Neodymium Magnetic Clips",
+    "price": 1799,
+    "mrp": 2999,
+    "brand": "LENS S WORLD",
+    "sku": "LSW-CLIP-01",
+    "stock": 20,
+    "rating": 4.9,
+    "reviews": 31,
+    "isNew": true,
+    "bestSeller": false,
+    "size": "Medium (52-18-142)",
+    "weight": "19g",
+    "description": "Seamlessly switch between optical eyeglasses and polarized dark sunglasses in one second using high-strength magnetic snap-on technology.",
+    "features": [
+      "Instant Magnetic Snap-On Polarized Tint Clip",
+      "Lightweight TR90 Memory Frame for All-Day Wear",
+      "Fully Compatible with Doctor Prescription Lenses",
+      "Includes Clip Storage Pouch and Hard Travel Case"
+    ],
+    "frameOnlyAvailable": true,
+    "prescriptionAvailable": true,
+    "lensOptionsAvailable": true,
+    "imgHash": "magnetic_clipon_sunglasses_01"
+  },
   {
     "id": "lens-s-world-orbit-round-metal",
     "name": "LENS S WORLD Titanium Featherlite Rectangle Eyeglasses #1",

@@ -683,6 +683,8 @@ export default function AdminDashboardPage({ setCurrentRoute }) {
                 <option value="custom">Admin Added / Custom</option>
                 <option value="eyeglasses">Eyeglasses</option>
                 <option value="sunglasses">Sunglasses</option>
+                <option value="clip-on">Clip-on</option>
+                <option value="meta-ai">Meta AI Sunglasses</option>
                 <option value="power-specs">Power Specs</option>
                 <option value="contact-lenses">Contact Lenses</option>
                 <option value="reading-glasses">Reading Glasses</option>
@@ -937,6 +939,8 @@ export default function AdminDashboardPage({ setCurrentRoute }) {
                   >
                     <option value="eyeglasses">Eyeglasses</option>
                     <option value="sunglasses">Sunglasses</option>
+                    <option value="clip-on">Clip-on</option>
+                    <option value="meta-ai">Meta AI Sunglasses</option>
                     <option value="power-specs">Power Specs</option>
                     <option value="contact-lenses">Contact Lens</option>
                     <option value="reading-glasses">Reading Glasses</option>
@@ -1196,6 +1200,8 @@ export default function AdminDashboardPage({ setCurrentRoute }) {
                   >
                     <option value="eyeglasses">Eyeglasses</option>
                     <option value="sunglasses">Sunglasses</option>
+                    <option value="clip-on">Clip-on</option>
+                    <option value="meta-ai">Meta AI Sunglasses</option>
                     <option value="power-specs">Power Specs</option>
                     <option value="contact-lenses">Contact Lens</option>
                     <option value="reading-glasses">Reading Glasses</option>
