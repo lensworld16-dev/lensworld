@@ -1755,7 +1755,8 @@ window.updateOrderStatusAdmin = function(orderId, newStatus) {
 
 window.viewPrescriptionSlipModal = function(orderId) {
   const order = store.orders.find(o => o.id === orderId);
-  if (!order || !order.prescriptionFile) {
+  const file = order?.prescriptionFile || order?.items?.find(it => it.prescriptionFile)?.prescriptionFile;
+  if (!order || !file) {
     store.showToast('No uploaded prescription image found for this order.', 'info');
     return;
   }
@@ -1764,14 +1765,16 @@ window.viewPrescriptionSlipModal = function(orderId) {
   const imgEl = document.getElementById('admin-slip-img');
   const infoEl = document.getElementById('admin-slip-info');
   const dlEl = document.getElementById('admin-slip-download');
+  if (!modal || !imgEl) return;
 
-  const file = order.prescriptionFile;
-  const src = file.dataUrl || file.url || '';
+  const src = file.dataUrl || file.url || (typeof file === 'string' ? file : '');
 
   imgEl.src = src;
-  infoEl.innerHTML = `<strong>Order:</strong> ${order.id} | <strong>File:</strong> ${file.name || 'prescription'} (${file.size || ''})`;
-  dlEl.href = src;
-  dlEl.download = `Prescription-${order.id}-${file.name || 'slip.png'}`;
+  if (infoEl) infoEl.innerHTML = `<strong>Order:</strong> #${order.id} | <strong>File:</strong> ${file.name || 'Prescription Slip'} ${file.size ? `(${file.size})` : ''}`;
+  if (dlEl) {
+    dlEl.href = src;
+    dlEl.download = `Prescription-${order.id}-${file.name || 'slip.png'}`;
+  }
 
   modal.style.display = 'flex';
 };

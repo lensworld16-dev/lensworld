@@ -49,6 +49,7 @@ export default function AdminDashboardPage({ setCurrentRoute }) {
   const { 
     orders, 
     updateOrderStatus, 
+    updateOrderPrescription,
     products, 
     updateProduct, 
     addProduct, 
@@ -104,6 +105,50 @@ export default function AdminDashboardPage({ setCurrentRoute }) {
   const [orderSearch, setOrderSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedOrderModal, setSelectedOrderModal] = useState(null);
+
+  // Manual Power Edit State for Admin
+  const [editingPowerOrder, setEditingPowerOrder] = useState(null);
+  const [powerFormData, setPowerFormData] = useState({
+    odSphere: '0.00',
+    odCyl: '0.00',
+    odAxis: '0',
+    osSphere: '0.00',
+    osCyl: '0.00',
+    osAxis: '0',
+    readingPower: ''
+  });
+
+  const handleOpenPowerEdit = (order) => {
+    const rxDetails = order.prescriptionDetails || order.items?.find(it => it.prescriptionDetails || it.prescriptionData)?.prescriptionDetails || order.items?.find(it => it.prescriptionData)?.prescriptionData || {};
+    const readingPower = order.items?.find(it => it.readingPower)?.readingPower || rxDetails?.readingPower || '';
+
+    setEditingPowerOrder(order);
+    setPowerFormData({
+      odSphere: rxDetails.odSphere || rxDetails.right?.sph || '0.00',
+      odCyl: rxDetails.odCyl || rxDetails.right?.cyl || '0.00',
+      odAxis: rxDetails.odAxis || rxDetails.right?.axis || '0',
+      osSphere: rxDetails.osSphere || rxDetails.left?.sph || '0.00',
+      osCyl: rxDetails.osCyl || rxDetails.left?.cyl || '0.00',
+      osAxis: rxDetails.osAxis || rxDetails.left?.axis || '0',
+      readingPower: readingPower
+    });
+  };
+
+  const handleSavePower = (e) => {
+    e.preventDefault();
+    if (!editingPowerOrder) return;
+    updateOrderPrescription(editingPowerOrder.id, {
+      ...powerFormData
+    });
+    if (selectedOrderModal && selectedOrderModal.id === editingPowerOrder.id) {
+      setSelectedOrderModal(prev => ({
+        ...prev,
+        prescriptionDetails: { ...powerFormData },
+        prescriptionMethod: 'manual'
+      }));
+    }
+    setEditingPowerOrder(null);
+  };
 
   // Search & Filter state for products inventory
   const [productSearch, setProductSearch] = useState('');
@@ -500,7 +545,11 @@ export default function AdminDashboardPage({ setCurrentRoute }) {
                     </tr>
                   ) : (
                     filteredOrders.map(order => {
-                      const hasRx = order.prescriptionFile || order.prescriptionDetails || order.prescriptionMethod;
+                      const rxFile = order.prescriptionFile || order.items?.find(it => it.prescriptionFile)?.prescriptionFile;
+                      const rxDetails = order.prescriptionDetails || order.items?.find(it => it.prescriptionDetails || it.prescriptionData)?.prescriptionDetails || order.items?.find(it => it.prescriptionData)?.prescriptionData;
+                      const rxMethod = order.prescriptionMethod || order.items?.find(it => it.prescriptionMethod)?.prescriptionMethod;
+                      const readingPower = order.items?.find(it => it.readingPower)?.readingPower || rxDetails?.readingPower;
+                      const hasRx = Boolean(rxFile || rxDetails || rxMethod || readingPower);
 
                       return (
                         <tr key={order.id} className="hover:bg-slate-50/80 transition">
@@ -536,21 +585,82 @@ export default function AdminDashboardPage({ setCurrentRoute }) {
                               <span className="text-[11px] text-teal-700 font-medium block truncate">
                                 Lens: {order.items[0].selectedLens.name}
                               </span>
+                            ) : order.items?.[0]?.readingPower ? (
+                              <span className="text-[11px] text-blue-700 font-medium block truncate">
+                                Reader: {order.items[0].readingPower}
+                              </span>
                             ) : (
                               <span className="text-[11px] text-slate-400">Frame Only</span>
                             )}
                           </td>
 
-                          {/* Prescription */}
+                          {/* Prescription & Power */}
                           <td className="p-4">
-                            {hasRx ? (
-                              <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-800 px-2 py-0.5 rounded-md font-bold text-[11px] border border-amber-200">
-                                <FileText className="w-3 h-3" />
-                                {order.prescriptionFile ? 'File Attached' : order.prescriptionDetails ? 'Power Entered' : 'WhatsApp Rx'}
-                              </span>
-                            ) : (
-                              <span className="text-slate-400 text-[11px]">Not Required</span>
+                            {readingPower && (
+                              <div className="mb-1">
+                                <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-800 px-2 py-0.5 rounded text-[11px] font-bold border border-blue-200">
+                                  🔍 Power: {readingPower}
+                                </span>
+                              </div>
                             )}
+
+                            {rxDetails && (rxDetails.odSphere || rxDetails.right?.sph || rxDetails.osSphere || rxDetails.left?.sph) ? (
+                              <div className="bg-emerald-50 text-emerald-950 p-2 rounded-lg border border-emerald-200 text-[10px] space-y-0.5 min-w-[155px] shadow-sm">
+                                <div className="font-bold text-[11px] text-emerald-800 flex items-center justify-between pb-1 border-b border-emerald-200">
+                                  <span>👁️ Power Entered</span>
+                                  <span className="text-[9px] uppercase tracking-wider text-emerald-700 font-extrabold">Rx</span>
+                                </div>
+                                <div className="grid grid-cols-4 text-center font-mono font-bold bg-emerald-100/80 p-0.5 rounded text-[9px] text-emerald-900">
+                                  <span>Eye</span>
+                                  <span>SPH</span>
+                                  <span>CYL</span>
+                                  <span>AXIS</span>
+                                </div>
+                                <div className="grid grid-cols-4 text-center font-mono text-[10px] py-0.5">
+                                  <span className="font-bold text-slate-700">R (OD)</span>
+                                  <span className="font-extrabold text-emerald-700">{rxDetails.odSphere || rxDetails.right?.sph || '0.00'}</span>
+                                  <span>{rxDetails.odCyl || rxDetails.right?.cyl || '0.00'}</span>
+                                  <span>{rxDetails.odAxis || rxDetails.right?.axis || '-'}</span>
+                                </div>
+                                <div className="grid grid-cols-4 text-center font-mono text-[10px] py-0.5 border-t border-emerald-100">
+                                  <span className="font-bold text-slate-700">L (OS)</span>
+                                  <span className="font-extrabold text-emerald-700">{rxDetails.osSphere || rxDetails.left?.sph || '0.00'}</span>
+                                  <span>{rxDetails.osCyl || rxDetails.left?.cyl || '0.00'}</span>
+                                  <span>{rxDetails.osAxis || rxDetails.left?.axis || '-'}</span>
+                                </div>
+                              </div>
+                            ) : null}
+
+                            {rxFile ? (
+                              <button
+                                type="button"
+                                onClick={() => setSelectedOrderModal(order)}
+                                className="inline-flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 px-2.5 py-1 rounded-md font-bold text-[11px] border border-amber-300 transition mt-1 shadow-sm cursor-pointer"
+                              >
+                                <FileText className="w-3.5 h-3.5 text-amber-600" />
+                                <span>Doctor Rx Slip</span>
+                              </button>
+                            ) : null}
+
+                            {rxMethod === 'whatsapp' && !rxFile && !rxDetails ? (
+                              <span className="inline-flex items-center gap-1 bg-sky-50 text-sky-800 px-2 py-0.5 rounded text-[11px] font-semibold border border-sky-200 mt-1">
+                                📲 WhatsApp Rx
+                              </span>
+                            ) : null}
+
+                            {!readingPower && (!rxDetails || (!rxDetails.odSphere && !rxDetails.right?.sph)) && !rxFile && rxMethod !== 'whatsapp' ? (
+                              <span className="text-slate-400 text-[11px] block">Zero Power / Frame Only</span>
+                            ) : null}
+
+                            <button
+                              type="button"
+                              onClick={() => handleOpenPowerEdit(order)}
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-700 hover:text-teal-900 bg-teal-50 hover:bg-teal-100 px-2 py-0.5 rounded border border-teal-200 transition mt-1 cursor-pointer"
+                              title="Add or edit prescription power for this order"
+                            >
+                              <Edit3 className="w-2.5 h-2.5" />
+                              {rxDetails || readingPower ? 'Edit Power' : '+ Add Power'}
+                            </button>
                           </td>
 
                           {/* Payment */}
@@ -1302,6 +1412,408 @@ export default function AdminDashboardPage({ setCurrentRoute }) {
               </div>
             </form>
 
+          </div>
+        </div>
+      )}
+
+      {/* Full Order & Prescription Details Modal */}
+      {selectedOrderModal && (() => {
+        const o = selectedOrderModal;
+        const rxFile = o.prescriptionFile || o.items?.find(it => it.prescriptionFile)?.prescriptionFile;
+        const rxDetails = o.prescriptionDetails || o.items?.find(it => it.prescriptionDetails || it.prescriptionData)?.prescriptionDetails || o.items?.find(it => it.prescriptionData)?.prescriptionData;
+        const rxMethod = o.prescriptionMethod || o.items?.find(it => it.prescriptionMethod)?.prescriptionMethod;
+        const readingPower = o.items?.find(it => it.readingPower)?.readingPower || rxDetails?.readingPower;
+        const fullAddress = [o.customer?.address, o.customer?.landmark ? `Landmark: ${o.customer.landmark}` : '', o.customer?.city, o.customer?.state, o.customer?.pincode ? `PIN: ${o.customer.pincode}` : ''].filter(Boolean).join(', ');
+        const rxFileSrc = rxFile?.dataUrl || rxFile?.url || (typeof rxFile === 'string' ? rxFile : '');
+
+        return (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+            <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden border border-slate-200 my-8 animate-in fade-in zoom-in duration-150">
+              
+              {/* Modal Header */}
+              <div className="p-5 bg-gradient-to-r from-slate-900 to-[#000040] text-white flex justify-between items-center">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-extrabold text-lg tracking-tight">Order #{o.id}</h3>
+                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                      o.paymentStatus === 'Paid' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                    }`}>
+                      {o.paymentMethod} • {o.paymentStatus || 'Pending'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-0.5">
+                    Placed on {new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setSelectedOrderModal(null)}
+                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6 max-h-[75vh] overflow-y-auto space-y-6">
+                
+                {/* 1. Customer & Shipping Info */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                  <h4 className="text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-2">Customer & Shipping Information</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="font-extrabold text-slate-900 text-base">{o.customer?.name || 'Customer'}</p>
+                      <p className="text-slate-600 mt-0.5">📱 Phone: <a href={`tel:${o.customer?.phone}`} className="text-teal-700 font-semibold hover:underline">{o.customer?.phone || 'N/A'}</a></p>
+                      {o.customer?.email && (
+                        <p className="text-slate-600">✉️ Email: <span className="font-medium text-slate-800">{o.customer.email}</span></p>
+                      )}
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border border-slate-200">
+                      <span className="text-[11px] font-bold text-slate-400 uppercase block mb-1">📍 Complete Delivery Address</span>
+                      <p className="text-slate-800 text-xs leading-relaxed font-medium">
+                        {fullAddress || 'Address not provided'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Eye Power & Prescription Section (CRITICAL HIGHLIGHT) */}
+                <div className="bg-gradient-to-br from-emerald-50/70 to-teal-50/50 border-2 border-emerald-300 rounded-xl p-5">
+                  <div className="flex items-center justify-between mb-3 border-b border-emerald-200 pb-2">
+                    <h4 className="font-black text-sm text-emerald-950 uppercase tracking-wide flex items-center gap-2">
+                      <Glasses className="w-5 h-5 text-emerald-700" />
+                      <span>Prescription & Eye Power Details</span>
+                    </h4>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenPowerEdit(o)}
+                        className="inline-flex items-center gap-1 bg-white hover:bg-emerald-100 text-emerald-800 px-3 py-1 rounded-lg font-bold text-xs border border-emerald-300 shadow-sm transition cursor-pointer"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        {rxDetails || readingPower ? 'Edit Power' : '+ Add Power Manually'}
+                      </button>
+                      <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300">
+                        {rxFile ? 'Doctor Rx Slip' : rxDetails ? 'Custom Power' : readingPower ? 'Reader Power' : 'Zero Power'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {readingPower && (
+                    <div className="mb-4 bg-blue-100/70 border border-blue-300 text-blue-900 px-4 py-2.5 rounded-lg flex items-center justify-between">
+                      <span className="text-sm font-bold">🔍 Single Vision Reading Power:</span>
+                      <span className="text-base font-extrabold text-blue-700 font-mono">{readingPower}</span>
+                    </div>
+                  )}
+
+                  {rxDetails && (rxDetails.odSphere || rxDetails.right?.sph || rxDetails.osSphere || rxDetails.left?.sph) ? (
+                    <div className="bg-white rounded-xl border border-emerald-300 p-4 shadow-sm mb-4">
+                      <div className="text-xs font-extrabold text-emerald-900 mb-2">👁️ Complete SPH / CYL / AXIS Values:</div>
+                      <table className="w-full text-center text-xs border-collapse">
+                        <thead>
+                          <tr className="bg-emerald-100/90 text-emerald-900 font-bold border-b border-emerald-200">
+                            <th className="p-2 text-left">Eye</th>
+                            <th className="p-2">Sphere (SPH)</th>
+                            <th className="p-2">Cylinder (CYL)</th>
+                            <th className="p-2">Axis</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-emerald-100 font-mono">
+                          <tr>
+                            <td className="p-2.5 text-left font-bold text-slate-800 font-sans">Right Eye (OD)</td>
+                            <td className="p-2.5 font-extrabold text-emerald-800">{rxDetails.odSphere || rxDetails.right?.sph || '0.00'}</td>
+                            <td className="p-2.5 font-semibold text-slate-700">{rxDetails.odCyl || rxDetails.right?.cyl || '0.00'}</td>
+                            <td className="p-2.5 font-semibold text-slate-700">{rxDetails.odAxis || rxDetails.right?.axis || '-'}</td>
+                          </tr>
+                          <tr>
+                            <td className="p-2.5 text-left font-bold text-slate-800 font-sans">Left Eye (OS)</td>
+                            <td className="p-2.5 font-extrabold text-emerald-800">{rxDetails.osSphere || rxDetails.left?.sph || '0.00'}</td>
+                            <td className="p-2.5 font-semibold text-slate-700">{rxDetails.osCyl || rxDetails.left?.cyl || '0.00'}</td>
+                            <td className="p-2.5 font-semibold text-slate-700">{rxDetails.osAxis || rxDetails.left?.axis || '-'}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : null}
+
+                  {rxFile && rxFileSrc && (
+                    <div className="bg-white rounded-xl border border-amber-300 p-4 shadow-sm">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-extrabold text-amber-900 flex items-center gap-1.5">
+                          <FileText className="w-4 h-4 text-amber-600" /> Uploaded Doctor's Prescription Slip:
+                        </span>
+                        <a 
+                          href={rxFileSrc} 
+                          download={`Prescription-${o.id}-${rxFile.name || 'slip.png'}`} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="text-xs font-bold text-teal-700 hover:text-teal-900 bg-teal-50 px-2.5 py-1 rounded-md border border-teal-200 transition"
+                        >
+                          ⬇️ Open / Download Image
+                        </a>
+                      </div>
+                      <div className="bg-slate-100 rounded-lg p-2 border border-slate-200 flex justify-center max-h-72 overflow-hidden">
+                        <img 
+                          src={rxFileSrc} 
+                          alt="Doctor Prescription Slip" 
+                          className="max-h-64 object-contain rounded"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {rxMethod === 'whatsapp' && (
+                    <div className="bg-sky-50 border border-sky-300 text-sky-900 p-3 rounded-lg text-xs font-bold flex items-center gap-2">
+                      <span>📲</span>
+                      <span>Customer has chosen to send prescription via WhatsApp.</span>
+                    </div>
+                  )}
+
+                  {!readingPower && (!rxDetails || (!rxDetails.odSphere && !rxDetails.right?.sph)) && !rxFile && rxMethod !== 'whatsapp' && (
+                    <div className="text-xs text-slate-500 italic bg-white/60 p-3 rounded-lg border border-dashed border-slate-300 text-center">
+                      No prescription required (Frame Only or Zero Power Demo lenses).
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Ordered Products & Lenses */}
+                <div className="border border-slate-200 rounded-xl overflow-hidden">
+                  <div className="bg-slate-100 p-3 font-extrabold text-xs text-slate-600 uppercase tracking-wider">
+                    Ordered Products ({o.items?.length || 0})
+                  </div>
+                  <div className="divide-y divide-slate-100">
+                    {(o.items || []).map((item, idx) => (
+                      <div key={idx} className="p-3.5 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          {item.img && (
+                            <img 
+                              src={item.img} 
+                              alt={item.name} 
+                              className="w-12 h-12 rounded-lg object-cover border border-slate-200 bg-slate-50"
+                            />
+                          )}
+                          <div>
+                            <p className="font-extrabold text-slate-900 text-sm">{item.name}</p>
+                            <p className="text-xs text-slate-500">Qty: <span className="font-bold text-slate-700">{item.qty || 1}</span> • Price: <span className="font-semibold">₹{(item.price || 0).toLocaleString('en-IN')}</span></p>
+                            {item.selectedLens ? (
+                              <p className="text-xs text-teal-700 font-bold mt-0.5">👓 Lens: {item.selectedLens.name} (+₹{item.selectedLens.price || 0})</p>
+                            ) : item.readingPower ? (
+                              <p className="text-xs text-blue-700 font-bold mt-0.5">🔍 Reader Power: {item.readingPower}</p>
+                            ) : (
+                              <p className="text-xs text-slate-400 mt-0.5">Frame Only</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-extrabold text-slate-900 text-sm">
+                            ₹{((item.price || 0) * (item.qty || 1)).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 4. Financial Breakdown */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-1.5 text-xs">
+                  <div className="flex justify-between text-slate-600">
+                    <span>Subtotal</span>
+                    <span className="font-semibold">₹{(o.subtotal || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                  {o.discount > 0 && (
+                    <div className="flex justify-between text-emerald-600 font-bold">
+                      <span>Discount {o.couponApplied ? `(${o.couponApplied})` : ''}</span>
+                      <span>-₹{(o.discount || 0).toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-slate-600">
+                    <span>Shipping</span>
+                    <span className="font-semibold">{o.shipping ? `₹${o.shipping}` : 'Free'}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>GST (Tax Included)</span>
+                    <span className="font-semibold">₹{(o.gst || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-900 font-extrabold text-base border-t border-slate-200 pt-2 mt-1">
+                    <span>Grand Total</span>
+                    <span className="text-teal-800">₹{(o.total || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+
+                {/* 5. Status Updater & Actions */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-700">Update Order Status:</span>
+                    <select
+                      value={o.status}
+                      onChange={(e) => {
+                        handleStatusChange(o.id, e.target.value);
+                        setSelectedOrderModal({ ...o, status: e.target.value });
+                      }}
+                      className="p-2 border border-slate-300 rounded-lg text-xs font-bold outline-none cursor-pointer bg-white"
+                    >
+                      {ORDER_STATUSES.map(st => (
+                        <option key={st} value={st}>{st}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => printGSTInvoice(o)}
+                      className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition flex items-center gap-1.5"
+                    >
+                      <Printer className="w-4 h-4" /> Print GST Invoice
+                    </button>
+                    <a
+                      href={getWhatsAppUrl(`Hello ${o.customer?.name || 'Customer'}, regarding your LENS S WORLD order #${o.id} (${(o.total || 0).toLocaleString('en-IN')})...`)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm"
+                    >
+                      <MessageCircle className="w-4 h-4" /> WhatsApp Customer
+                    </a>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Manual Eye Power Editor Modal */}
+      {editingPowerOrder && (
+        <div className="fixed inset-0 z-[60] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-150">
+            <div className="p-4 bg-gradient-to-r from-emerald-800 to-teal-900 text-white flex justify-between items-center">
+              <div>
+                <h3 className="font-extrabold text-base flex items-center gap-2">
+                  <Glasses className="w-5 h-5 text-emerald-300" />
+                  <span>Manual Power Entry / Edit</span>
+                </h3>
+                <p className="text-xs text-emerald-200 mt-0.5">Order #{editingPowerOrder.id} • {editingPowerOrder.customer?.name || 'Customer'}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingPowerOrder(null)}
+                className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePower} className="p-5 space-y-4">
+              
+              {/* Right Eye OD */}
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <span className="font-extrabold text-xs text-slate-800 uppercase tracking-wide block mb-2">
+                  👁️ Right Eye (OD)
+                </span>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Sphere (SPH)</label>
+                    <input
+                      type="text"
+                      value={powerFormData.odSphere}
+                      onChange={(e) => setPowerFormData({ ...powerFormData, odSphere: e.target.value })}
+                      placeholder="-1.50"
+                      className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-emerald-800 outline-none focus:border-emerald-600 text-center"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Cylinder (CYL)</label>
+                    <input
+                      type="text"
+                      value={powerFormData.odCyl}
+                      onChange={(e) => setPowerFormData({ ...powerFormData, odCyl: e.target.value })}
+                      placeholder="0.00"
+                      className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-slate-700 outline-none focus:border-emerald-600 text-center"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Axis (°)</label>
+                    <input
+                      type="text"
+                      value={powerFormData.odAxis}
+                      onChange={(e) => setPowerFormData({ ...powerFormData, odAxis: e.target.value })}
+                      placeholder="90"
+                      className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-slate-700 outline-none focus:border-emerald-600 text-center"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Left Eye OS */}
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <span className="font-extrabold text-xs text-slate-800 uppercase tracking-wide block mb-2">
+                  👁️ Left Eye (OS)
+                </span>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Sphere (SPH)</label>
+                    <input
+                      type="text"
+                      value={powerFormData.osSphere}
+                      onChange={(e) => setPowerFormData({ ...powerFormData, osSphere: e.target.value })}
+                      placeholder="-1.50"
+                      className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-emerald-800 outline-none focus:border-emerald-600 text-center"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Cylinder (CYL)</label>
+                    <input
+                      type="text"
+                      value={powerFormData.osCyl}
+                      onChange={(e) => setPowerFormData({ ...powerFormData, osCyl: e.target.value })}
+                      placeholder="0.00"
+                      className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-slate-700 outline-none focus:border-emerald-600 text-center"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Axis (°)</label>
+                    <input
+                      type="text"
+                      value={powerFormData.osAxis}
+                      onChange={(e) => setPowerFormData({ ...powerFormData, osAxis: e.target.value })}
+                      placeholder="180"
+                      className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-slate-700 outline-none focus:border-emerald-600 text-center"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Single Vision / Reading Power */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                  🔍 Reading / Near Addition Power (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={powerFormData.readingPower}
+                  onChange={(e) => setPowerFormData({ ...powerFormData, readingPower: e.target.value })}
+                  placeholder="e.g. +1.50 or +2.00"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-sm font-semibold outline-none focus:border-emerald-600"
+                />
+              </div>
+
+              <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingPowerOrder(null)}
+                  className="px-4 py-2 border rounded-xl font-bold text-xs text-slate-600 hover:bg-slate-50 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Save className="w-4 h-4" /> Save Power Values
+                </button>
+              </div>
+
+            </form>
           </div>
         </div>
       )}

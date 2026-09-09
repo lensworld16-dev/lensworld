@@ -310,25 +310,30 @@ export function ShopProvider({ children }) {
           .order('created_at', { ascending: false });
 
         if (!orderErr && dbOrders && dbOrders.length > 0) {
-          const formattedOrders = dbOrders.map(o => ({
-            id: o.id,
-            createdAt: o.created_at,
-            status: o.status || 'Placed',
-            customer: o.customer || {},
-            items: o.items || [],
-            subtotal: Number(o.subtotal) || 0,
-            discount: Number(o.discount) || 0,
-            couponApplied: o.coupon_applied,
-            shipping: Number(o.shipping) || 0,
-            gst: Number(o.gst) || 0,
-            total: Number(o.total) || 0,
-            paymentMethod: o.payment_method || 'COD',
-            paymentStatus: o.payment_status || 'Pending',
-            prescriptionMethod: o.prescription_method,
-            prescriptionFile: o.prescription_file,
-            prescriptionDetails: o.prescription_details,
-            notes: o.notes || ''
-          }));
+          const formattedOrders = dbOrders.map(o => {
+            const itemsList = Array.isArray(o.items) ? o.items : [];
+            const rxIt = itemsList.find(it => it.prescriptionMethod || it.prescriptionFile || it.prescriptionDetails || it.prescriptionData || it.readingPower);
+
+            return {
+              id: o.id,
+              createdAt: o.created_at,
+              status: o.status || 'Placed',
+              customer: o.customer || {},
+              items: itemsList,
+              subtotal: Number(o.subtotal) || 0,
+              discount: Number(o.discount) || 0,
+              couponApplied: o.coupon_applied,
+              shipping: Number(o.shipping) || 0,
+              gst: Number(o.gst) || 0,
+              total: Number(o.total) || 0,
+              paymentMethod: o.payment_method || 'COD',
+              paymentStatus: o.payment_status || 'Pending',
+              prescriptionMethod: o.prescription_method || rxIt?.prescriptionMethod || null,
+              prescriptionFile: o.prescription_file || rxIt?.prescriptionFile || null,
+              prescriptionDetails: o.prescription_details || rxIt?.prescriptionDetails || rxIt?.prescriptionData || (rxIt?.readingPower ? { readingPower: rxIt.readingPower } : null),
+              notes: o.notes || ''
+            };
+          });
           setOrders(formattedOrders);
         }
 
@@ -543,10 +548,16 @@ export function ShopProvider({ children }) {
   // Order Placement
   const placeOrder = async (orderData) => {
     const newOrderId = orderData.cfOrderId || `LSW-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const rxItem = cart.find(it => it.prescriptionMethod || it.prescriptionFile || it.prescriptionDetails || it.prescriptionData || it.readingPower);
+    const resolvedRxDetails = orderData.prescriptionDetails || rxItem?.prescriptionDetails || rxItem?.prescriptionData || (rxItem?.readingPower ? { readingPower: rxItem.readingPower } : null);
+    const resolvedRxFile = orderData.prescriptionFile || rxItem?.prescriptionFile || null;
+    const resolvedRxMethod = orderData.prescriptionMethod || rxItem?.prescriptionMethod || (resolvedRxDetails ? 'manual' : (resolvedRxFile ? 'upload' : null));
+
     const newOrder = {
       id: newOrderId,
       createdAt: new Date().toISOString(),
-      status: orderData.paymentStatus === 'Paid' ? "Payment Confirmed" : "Placed",
+      status: orderData.paymentStatus === 'Paid' ? "Payment Confirmed" : (resolvedRxFile || resolvedRxDetails ? "Prescription Verification" : "Placed"),
       items: [...cart],
       subtotal,
       discount,
@@ -557,9 +568,9 @@ export function ShopProvider({ children }) {
       customer: orderData.customer,
       paymentMethod: orderData.paymentMethod || "Cash on Delivery",
       paymentStatus: orderData.paymentStatus || (orderData.paymentMethod === "Cash on Delivery" ? "Pending" : "Paid"),
-      prescriptionMethod: orderData.prescriptionMethod || null,
-      prescriptionFile: orderData.prescriptionFile || null,
-      prescriptionDetails: orderData.prescriptionDetails || null,
+      prescriptionMethod: resolvedRxMethod,
+      prescriptionFile: resolvedRxFile,
+      prescriptionDetails: resolvedRxDetails,
       notes: orderData.notes || "",
       cfOrderId: orderData.cfOrderId || null,
       cfPaymentSessionId: orderData.cfPaymentSessionId || null
@@ -615,6 +626,36 @@ export function ShopProvider({ children }) {
         if (error) console.warn("Supabase status update notice:", error.message);
       } catch (err) {
         console.warn("Supabase status error:", err);
+      }
+    }
+  };
+
+  // Admin manual prescription / power update
+  const updateOrderPrescription = async (orderId, prescriptionDetails) => {
+    setOrders(prev => prev.map(order => {
+      if (order.id === orderId) {
+        return { 
+          ...order, 
+          prescriptionDetails, 
+          prescriptionMethod: 'manual' 
+        };
+      }
+      return order;
+    }));
+    showToast(`Eye power for Order #${orderId} saved successfully!`, "success");
+
+    if (supabase) {
+      try {
+        const { error } = await supabase
+          .from('orders')
+          .update({ 
+            prescription_details: prescriptionDetails,
+            prescription_method: 'manual'
+          })
+          .eq('id', orderId);
+        if (error) console.warn("Supabase prescription update notice:", error.message);
+      } catch (err) {
+        console.warn("Supabase prescription error:", err);
       }
     }
   };
@@ -812,6 +853,7 @@ export function ShopProvider({ children }) {
         removeCoupon,
         placeOrder,
         updateOrderStatus,
+        updateOrderPrescription,
         updateProduct,
         addProduct,
         deleteProduct,

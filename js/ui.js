@@ -481,7 +481,7 @@ export const UI = {
       } else if (category === 'clip-on') {
         filtered = filtered.filter(p => p.type === 'clip-on' || p.category === 'clip-on' || (p.tags && p.tags.includes('clip-on')) || (p.cats && p.cats.includes('clip-on')) || (p.name && p.name.toLowerCase().includes('clip')));
       } else if (category === 'meta-ai') {
-        filtered = filtered.filter(p => p.type === 'meta-ai' || p.category === 'meta-ai' || (p.tags && p.tags.includes('meta-ai')) || (p.cats && p.cats.includes('meta-ai')) || (p.name && p.name.toLowerCase().includes('meta')));
+        filtered = filtered.filter(p => p.type === 'meta-ai' || p.category === 'meta-ai' || (p.tags && p.tags.includes('meta-ai')) || (p.cats && p.cats.includes('meta-ai')) || (/\bmeta\s*ai\b/i.test(p.name || '')));
       } else if (category === 'sunglasses') {
         filtered = filtered.filter(p => p.type === 'sunglasses' || p.type === 'clip-on' || p.type === 'meta-ai' || p.category === 'sunglasses' || (p.cats && p.cats.includes('sunglasses')));
       } else {
@@ -503,13 +503,13 @@ export const UI = {
       filtered = filtered.filter(p => 
         (tagLower === 'new' && (p.isNew === true || (p.badge && p.badge.toLowerCase().includes('new')))) ||
         (tagLower === 'trending' && (p.isTrending === true || p.trending === true || (p.badge && p.badge.toLowerCase().includes('trend')))) ||
-        (tagLower === 'meta-ai' && (p.type === 'meta-ai' || (p.tags && p.tags.includes('meta-ai')) || (p.cats && p.cats.includes('meta-ai')) || (p.name && p.name.toLowerCase().includes('meta')))) ||
+        (tagLower === 'meta-ai' && (p.type === 'meta-ai' || (p.tags && p.tags.includes('meta-ai')) || (p.cats && p.cats.includes('meta-ai')) || (/\bmeta\s*ai\b/i.test(p.name || '')))) ||
         (tagLower === 'clip-on' && (p.type === 'clip-on' || (p.tags && p.tags.includes('clip-on')) || (p.cats && p.cats.includes('clip-on')) || (p.name && p.name.toLowerCase().includes('clip')))) ||
         (p.tags && p.tags.some(t => t.toLowerCase().includes(tagLower))) ||
         (p.cats && p.cats.some(c => c.toLowerCase().includes(tagLower))) ||
         (p.gender && p.gender.toLowerCase().includes(tagLower)) ||
         (tagLower === 'couple' && (p.gender === 'unisex' || (p.cats && p.cats.includes('unisex')))) ||
-        (p.name && p.name.toLowerCase().includes(tagLower)) ||
+        (tagLower !== 'meta-ai' && p.name && p.name.toLowerCase().includes(tagLower)) ||
         (p.shape && p.shape.toLowerCase().includes(tagLower)) ||
         (p.description && p.description.toLowerCase().includes(tagLower))
       );
@@ -2371,6 +2371,10 @@ export const UI = {
               ` : store.orders.map(o => {
                 const fullAddress = [o.customer?.address, o.customer?.city, o.customer?.pincode ? `PIN: ${o.customer.pincode}` : ''].filter(Boolean).join(', ');
                 const orderDate = new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                const rxFile = o.prescriptionFile || (o.items || []).find(it => it.prescriptionFile)?.prescriptionFile;
+                const rxDetails = o.prescriptionDetails || (o.items || []).find(it => it.prescriptionDetails || it.prescriptionData)?.prescriptionDetails || (o.items || []).find(it => it.prescriptionData)?.prescriptionData;
+                const rxMethod = o.prescriptionMethod || (o.items || []).find(it => it.prescriptionMethod)?.prescriptionMethod;
+                const readingPower = (o.items || []).find(it => it.readingPower)?.readingPower || rxDetails?.readingPower;
 
                 return `
                   <div class="admin-order-card" style="background:#fff; border:1.5px solid #e2e8f0; border-radius:14px; padding:1.15rem; box-shadow:0 2px 8px rgba(0,0,0,0.03);">
@@ -2425,24 +2429,71 @@ export const UI = {
                             ${(o.items || []).map(it => `
                               <div style="padding-bottom:0.35rem; border-bottom:1px dashed #e2e8f0;">
                                 <strong style="color:#000040; font-size:0.82rem;">${it.name}</strong> × <span style="font-weight:700;">${it.qty}</span>
-                                ${it.selectedLens ? `<div style="color:#0284c7; font-size:0.72rem; font-weight:600;">👓 Lens: ${it.selectedLens.name}</div>` : '<div style="color:#64748b; font-size:0.7rem;">Frame Only</div>'}
+                                ${it.selectedLens ? `<div style="color:#0284c7; font-size:0.72rem; font-weight:600;">👓 Lens: ${it.selectedLens.name}</div>` : (it.readingPower ? `<div style="color:#0284c7; font-size:0.72rem; font-weight:600;">🔍 Power: ${it.readingPower}</div>` : '<div style="color:#64748b; font-size:0.7rem;">Frame Only</div>')}
                               </div>
                             `).join('')}
                           </div>
                         </div>
 
-                        <!-- Prescription Slip Status -->
+                        <!-- Prescription Slip & Eye Power Status -->
                         <div style="margin-top:0.5rem; padding-top:0.4rem; border-top:1px solid #e2e8f0;">
-                          <span style="font-size:0.68rem; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:2px;">Prescription:</span>
-                          ${o.prescriptionFile ? `
-                            <button type="button" class="btn btn-navy btn-sm" onclick="window.viewPrescriptionSlipModal('${o.id}')" style="height:26px; padding:0 0.65rem; font-size:0.72rem;">
-                              📎 View Doctor Rx Slip
-                            </button>
-                          ` : (o.prescriptionDetails ? `
-                            <span style="font-size:0.75rem; color:#16a34a; font-weight:700;">Manual Power Entered</span>
-                          ` : `
-                            <span style="font-size:0.72rem; color:#64748b;">Zero Power / Plain Demo</span>
-                          `)}
+                          <span style="font-size:0.68rem; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:2px;">Prescription / Eye Power:</span>
+                          
+                          ${readingPower ? `
+                            <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:0.35rem 0.55rem; margin-top:0.25rem;">
+                              <span style="font-size:0.75rem; color:#1d4ed8; font-weight:800;">🔍 Reading Power: ${readingPower}</span>
+                            </div>
+                          ` : ''}
+
+                          ${rxDetails && (rxDetails.odSphere || rxDetails.right?.sph || rxDetails.osSphere || rxDetails.left?.sph) ? `
+                            <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:6px; padding:0.45rem 0.6rem; margin-top:0.3rem;">
+                              <div style="color:#166534; font-weight:800; font-size:0.72rem; margin-bottom:0.25rem; display:flex; align-items:center; gap:0.25rem;">
+                                <span>👁️ Power Entered:</span>
+                              </div>
+                              <table style="width:100%; font-size:0.72rem; border-collapse:collapse; color:#0f172a; text-align:center;">
+                                <thead>
+                                  <tr style="background:#dcfce7; color:#166534; font-size:0.68rem; font-weight:700;">
+                                    <th style="padding:2px 4px; text-align:left;">Eye</th>
+                                    <th style="padding:2px 4px;">SPH</th>
+                                    <th style="padding:2px 4px;">CYL</th>
+                                    <th style="padding:2px 4px;">AXIS</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr style="border-bottom:1px solid #bbf7d0;">
+                                    <td style="padding:2px 4px; text-align:left; font-weight:700;">Right (OD)</td>
+                                    <td style="padding:2px 4px; font-weight:700; color:#166534;">${rxDetails.odSphere || rxDetails.right?.sph || '0.00'}</td>
+                                    <td style="padding:2px 4px; font-weight:600;">${rxDetails.odCyl || rxDetails.right?.cyl || '0.00'}</td>
+                                    <td style="padding:2px 4px; font-weight:600;">${rxDetails.odAxis || rxDetails.right?.axis || '-'}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="padding:2px 4px; text-align:left; font-weight:700;">Left (OS)</td>
+                                    <td style="padding:2px 4px; font-weight:700; color:#166534;">${rxDetails.osSphere || rxDetails.left?.sph || '0.00'}</td>
+                                    <td style="padding:2px 4px; font-weight:600;">${rxDetails.osCyl || rxDetails.left?.cyl || '0.00'}</td>
+                                    <td style="padding:2px 4px; font-weight:600;">${rxDetails.osAxis || rxDetails.left?.axis || '-'}</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          ` : ''}
+
+                          ${rxFile ? `
+                            <div style="margin-top:0.35rem;">
+                              <button type="button" class="btn btn-navy btn-sm" onclick="window.viewPrescriptionSlipModal('${o.id}')" style="height:28px; padding:0 0.75rem; font-size:0.72rem; display:inline-flex; align-items:center; gap:0.35rem; font-weight:700;">
+                                📎 View Doctor Rx Slip (${rxFile.name || 'File Attached'})
+                              </button>
+                            </div>
+                          ` : ''}
+
+                          ${rxMethod === 'whatsapp' ? `
+                            <div style="color:#0284c7; font-weight:700; font-size:0.72rem; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:4px 8px; margin-top:0.3rem;">
+                              📲 Customer will send Rx on WhatsApp
+                            </div>
+                          ` : ''}
+
+                          ${!readingPower && (!rxDetails || (!rxDetails.odSphere && !rxDetails.right?.sph)) && !rxFile && rxMethod !== 'whatsapp' ? `
+                            <span style="font-size:0.72rem; color:#64748b;">Zero Power / Plain Demo / Frame Only</span>
+                          ` : ''}
                         </div>
                       </div>
                     </div>

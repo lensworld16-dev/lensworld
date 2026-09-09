@@ -90,6 +90,11 @@ export default function CheckoutPage({ setCurrentRoute, setCompletedOrder }) {
   };
 
   const finalizeOrder = async (extraOrderData = {}) => {
+    const rxItem = cart.find(it => it.prescriptionMethod || it.prescriptionFile || it.prescriptionDetails || it.prescriptionData || it.readingPower);
+    const resolvedRxDetails = rxItem?.prescriptionDetails || rxItem?.prescriptionData || (rxItem?.readingPower ? { readingPower: rxItem.readingPower } : null);
+    const resolvedRxFile = prescriptionFile || rxItem?.prescriptionFile || null;
+    const resolvedRxMethod = (hasPrescriptionItems ? prescriptionMethod : null) || rxItem?.prescriptionMethod || (resolvedRxDetails ? 'manual' : (resolvedRxFile ? 'upload' : null));
+
     const order = await placeOrder({
       customer: {
         name: formData.fullName,
@@ -103,8 +108,9 @@ export default function CheckoutPage({ setCurrentRoute, setCompletedOrder }) {
       },
       paymentMethod: extraOrderData.paymentMethod || (paymentMethod === 'COD' ? 'Cash on Delivery' : 'Cashfree Online'),
       paymentStatus: extraOrderData.paymentStatus || (paymentMethod === 'COD' ? 'Pending' : 'Paid'),
-      prescriptionMethod: hasPrescriptionItems ? prescriptionMethod : null,
-      prescriptionFile: prescriptionFile,
+      prescriptionMethod: resolvedRxMethod,
+      prescriptionFile: resolvedRxFile,
+      prescriptionDetails: resolvedRxDetails,
       notes,
       ...extraOrderData
     });

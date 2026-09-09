@@ -26,11 +26,17 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Order ID is required' });
     }
 
+    const itemsList = Array.isArray(order.items) ? order.items : [];
+    const rxIt = itemsList.find(it => it.prescriptionMethod || it.prescriptionFile || it.prescriptionDetails || it.prescriptionData || it.readingPower);
+    const resMethod = order.prescriptionMethod || rxIt?.prescriptionMethod || null;
+    const resFile = order.prescriptionFile || rxIt?.prescriptionFile || null;
+    const resDetails = order.prescriptionDetails || rxIt?.prescriptionDetails || rxIt?.prescriptionData || (rxIt?.readingPower ? { readingPower: rxIt.readingPower } : null);
+
     const payload = {
       id: order.id,
-      status: order.status || (order.paymentStatus === 'Paid' ? 'Payment Confirmed' : 'Placed'),
+      status: order.status || (order.paymentStatus === 'Paid' ? 'Payment Confirmed' : (resFile || resDetails ? 'Prescription Verification' : 'Placed')),
       customer: order.customer || {},
-      items: order.items || [],
+      items: itemsList,
       subtotal: Number(order.subtotal || 0),
       discount: Number(order.discount || 0),
       coupon_applied: order.couponApplied || null,
@@ -39,9 +45,9 @@ export default async function handler(req, res) {
       total: Number(order.total || order.grandTotal || 0),
       payment_method: order.paymentMethod || 'Cash on Delivery',
       payment_status: order.paymentStatus || (order.paymentMethod === 'Cash on Delivery' ? 'Pending' : 'Paid'),
-      prescription_method: order.prescriptionMethod || null,
-      prescription_file: order.prescriptionFile || null,
-      prescription_details: order.prescriptionDetails || null,
+      prescription_method: resMethod,
+      prescription_file: resFile,
+      prescription_details: resDetails,
       notes: order.notes || ''
     };
 

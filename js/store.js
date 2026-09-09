@@ -39,6 +39,9 @@ class Store {
             ))
           ) return;
 
+          // Purge mock Meta AI product from cached storage
+          if (p.id === 'lens-s-world-meta-ai-smart-sunglasses') return;
+
           seenIds.add(p.id);
           const isFeat = p.featured !== undefined ? Boolean(p.featured) : Boolean(p.isFeatured);
           const imgPath = p.img || (initialMap.get(p.id)?.img);
@@ -491,10 +494,15 @@ class Store {
     const totals = this.getTotals();
     const newOrderId = orderData.cfOrderId || `LSW-${Math.floor(1000 + Math.random() * 9000)}`;
 
+    const rxItem = this.cart.find(it => it.prescriptionMethod || it.prescriptionFile || it.prescriptionDetails || it.prescriptionData || it.readingPower);
+    const resolvedRxDetails = orderData.prescriptionDetails || rxItem?.prescriptionDetails || rxItem?.prescriptionData || (rxItem?.readingPower ? { readingPower: rxItem.readingPower } : null);
+    const resolvedRxFile = orderData.prescriptionFile || rxItem?.prescriptionFile || null;
+    const resolvedRxMethod = orderData.prescriptionMethod || rxItem?.prescriptionMethod || (resolvedRxDetails ? 'manual' : (resolvedRxFile ? 'upload' : null));
+
     const newOrder = {
       id: newOrderId,
       createdAt: new Date().toISOString(),
-      status: orderData.paymentStatus === 'Paid' ? "Payment Confirmed" : "Placed",
+      status: orderData.paymentStatus === 'Paid' ? "Payment Confirmed" : (resolvedRxFile || resolvedRxDetails ? "Prescription Verification" : "Placed"),
       items: JSON.parse(JSON.stringify(this.cart)),
       subtotal: totals.subtotal,
       discount: totals.discount,
@@ -505,9 +513,9 @@ class Store {
       customer: orderData.customer,
       paymentMethod: orderData.paymentMethod || "Cash on Delivery",
       paymentStatus: orderData.paymentStatus || (orderData.paymentMethod === "Cash on Delivery" ? "Pending" : "Paid"),
-      prescriptionMethod: orderData.prescriptionMethod || null,
-      prescriptionFile: orderData.prescriptionFile || null,
-      prescriptionDetails: orderData.prescriptionDetails || null,
+      prescriptionMethod: resolvedRxMethod,
+      prescriptionFile: resolvedRxFile,
+      prescriptionDetails: resolvedRxDetails,
       notes: orderData.notes || "",
       cfOrderId: orderData.cfOrderId || null,
       cfPaymentSessionId: orderData.cfPaymentSessionId || null
@@ -537,25 +545,30 @@ class Store {
       if (!res.ok) return;
       const data = await res.json();
       if (data.success && Array.isArray(data.orders)) {
-        const dbOrders = data.orders.map(o => ({
-          id: o.id,
-          createdAt: o.created_at || o.createdAt,
-          status: o.status,
-          items: Array.isArray(o.items) ? o.items : [],
-          subtotal: Number(o.subtotal || 0),
-          discount: Number(o.discount || 0),
-          couponApplied: o.coupon_applied || o.couponApplied,
-          shipping: Number(o.shipping || 0),
-          gst: Number(o.gst || 0),
-          total: Number(o.total || 0),
-          customer: o.customer || {},
-          paymentMethod: o.payment_method || o.paymentMethod || 'Cash on Delivery',
-          paymentStatus: o.payment_status || o.paymentStatus || 'Pending',
-          prescriptionMethod: o.prescription_method || o.prescriptionMethod,
-          prescriptionFile: o.prescription_file || o.prescriptionFile,
-          prescriptionDetails: o.prescription_details || o.prescriptionDetails,
-          notes: o.notes || ''
-        }));
+        const dbOrders = data.orders.map(o => {
+          const itemsList = Array.isArray(o.items) ? o.items : [];
+          const rxIt = itemsList.find(it => it.prescriptionMethod || it.prescriptionFile || it.prescriptionDetails || it.prescriptionData || it.readingPower);
+
+          return {
+            id: o.id,
+            createdAt: o.created_at || o.createdAt,
+            status: o.status,
+            items: itemsList,
+            subtotal: Number(o.subtotal || 0),
+            discount: Number(o.discount || 0),
+            couponApplied: o.coupon_applied || o.couponApplied,
+            shipping: Number(o.shipping || 0),
+            gst: Number(o.gst || 0),
+            total: Number(o.total || 0),
+            customer: o.customer || {},
+            paymentMethod: o.payment_method || o.paymentMethod || 'Cash on Delivery',
+            paymentStatus: o.payment_status || o.paymentStatus || 'Pending',
+            prescriptionMethod: o.prescription_method || o.prescriptionMethod || rxIt?.prescriptionMethod || null,
+            prescriptionFile: o.prescription_file || o.prescriptionFile || rxIt?.prescriptionFile || null,
+            prescriptionDetails: o.prescription_details || o.prescriptionDetails || rxIt?.prescriptionDetails || rxIt?.prescriptionData || (rxIt?.readingPower ? { readingPower: rxIt.readingPower } : null),
+            notes: o.notes || ''
+          };
+        });
 
         if (dbOrders.length > 0) {
           // Merge database orders with local orders (DB orders take precedence)
