@@ -11,6 +11,11 @@ import deleteProductHandler from './api/delete-product.js';
 import getLensPackagesHandler from './api/get-lens-packages.js';
 import saveLensPackageHandler from './api/save-lens-package.js';
 import deleteLensPackageHandler from './api/delete-lens-package.js';
+import getSiteConfigHandler from './api/get-site-config.js';
+import saveSiteConfigHandler from './api/save-site-config.js';
+import getCouponsHandler from './api/get-coupons.js';
+import saveCouponHandler from './api/save-coupon.js';
+import deleteCouponHandler from './api/delete-coupon.js';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -130,6 +135,48 @@ export default defineConfig(({ mode }) => {
                 req.query = Object.fromEntries(url.searchParams.entries());
                 try { req.body = bodyStr ? JSON.parse(bodyStr) : {}; } catch { req.body = {}; }
                 await deleteLensPackageHandler(req, createShimRes());
+              });
+              return;
+            }
+
+            if (url.pathname === '/api/get-site-config') {
+              req.query = Object.fromEntries(url.searchParams.entries());
+              await getSiteConfigHandler(req, createShimRes());
+              return;
+            }
+
+            if (url.pathname === '/api/save-site-config') {
+              let bodyStr = '';
+              req.on('data', chunk => { bodyStr += chunk; });
+              req.on('end', async () => {
+                try { req.body = bodyStr ? JSON.parse(bodyStr) : {}; } catch { req.body = {}; }
+                await saveSiteConfigHandler(req, createShimRes());
+              });
+              return;
+            }
+
+            if (url.pathname === '/api/get-coupons') {
+              await getCouponsHandler(req, createShimRes());
+              return;
+            }
+
+            if (url.pathname === '/api/save-coupon') {
+              let bodyStr = '';
+              req.on('data', chunk => { bodyStr += chunk; });
+              req.on('end', async () => {
+                try { req.body = bodyStr ? JSON.parse(bodyStr) : {}; } catch { req.body = {}; }
+                await saveCouponHandler(req, createShimRes());
+              });
+              return;
+            }
+
+            if (url.pathname === '/api/delete-coupon') {
+              let bodyStr = '';
+              req.on('data', chunk => { bodyStr += chunk; });
+              req.on('end', async () => {
+                req.query = Object.fromEntries(url.searchParams.entries());
+                try { req.body = bodyStr ? JSON.parse(bodyStr) : {}; } catch { req.body = {}; }
+                await deleteCouponHandler(req, createShimRes());
               });
               return;
             }

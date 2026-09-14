@@ -2240,9 +2240,14 @@ export const UI = {
         <!-- Tab 2: Categories Management -->
         ${activeTab === 'categories' ? `
           <div class="admin-section-box">
-            <div class="admin-box-header">
-              <h3>📁 Store Categories & Collections</h3>
-              <p>Create, manage, or delete eyewear categories on your store.</p>
+            <div class="admin-box-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+              <div>
+                <h3 style="font-size:1.15rem; font-weight:800; color:#000040; margin:0 0 0.2rem 0;">📁 Store Categories & Collections</h3>
+                <p style="color:#64748b; font-size:0.8rem; margin:0;">Create, manage, or delete eyewear categories live across all devices.</p>
+              </div>
+              <span style="background:#ecfdf5; color:#059669; font-size:0.72rem; font-weight:800; padding:3px 9px; border-radius:20px;">
+                ⚡ Live Supabase Synced
+              </span>
             </div>
 
             <!-- Add Category Form -->
@@ -2568,9 +2573,14 @@ export const UI = {
         <!-- Tab 5: Coupons -->
         ${activeTab === 'coupons' ? `
           <div class="admin-section-box">
-            <div class="admin-box-header">
-              <h3>🎟️ Discount Coupons & Promo Codes</h3>
-              <p>Create special promotional discount codes for customers to apply in cart.</p>
+            <div class="admin-box-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+              <div>
+                <h3 style="font-size:1.15rem; font-weight:800; color:#000040; margin:0 0 0.2rem 0;">🎟️ Discount Coupons & Promo Codes</h3>
+                <p style="color:#64748b; font-size:0.8rem; margin:0;">Create promotional discount codes synced with Supabase for instant checkout validation.</p>
+              </div>
+              <span style="background:#ecfdf5; color:#059669; font-size:0.72rem; font-weight:800; padding:3px 9px; border-radius:20px;">
+                ⚡ Live Supabase Synced
+              </span>
             </div>
 
             <form onsubmit="window.saveCouponForm(event)" class="admin-inline-form">
@@ -2628,9 +2638,14 @@ export const UI = {
         <!-- Tab 6: Store Settings -->
         ${activeTab === 'settings' ? `
           <div class="admin-section-box">
-            <div class="admin-box-header">
-              <h3>⚙️ Store Settings & Branding</h3>
-              <p>Configure store name, WhatsApp contact number, support email, and free shipping rules.</p>
+            <div class="admin-box-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+              <div>
+                <h3 style="font-size:1.15rem; font-weight:800; color:#000040; margin:0 0 0.2rem 0;">⚙️ Store Settings & Branding</h3>
+                <p style="color:#64748b; font-size:0.8rem; margin:0;">Configure store name, WhatsApp contact number, support email, and free shipping rules live in cloud.</p>
+              </div>
+              <span style="background:#ecfdf5; color:#059669; font-size:0.72rem; font-weight:800; padding:3px 9px; border-radius:20px;">
+                ⚡ Live Supabase Synced
+              </span>
             </div>
 
             <form onsubmit="window.saveStoreSettingsForm(event)" class="admin-settings-grid">
@@ -2677,9 +2692,19 @@ export const UI = {
         <!-- Tab 6: Category & Demographic Banner Photos -->
         ${activeTab === 'category_images' ? `
           <div class="admin-section-box">
-            <div class="admin-box-header">
-              <h3>🖼️ Category Story Circles & Demographic Model Photos</h3>
-              <p>Change the model pictures, story circle icons, and demographic banners displayed on the store front anytime.</p>
+            <div class="admin-box-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+              <div>
+                <h3 style="font-size:1.15rem; font-weight:800; color:#000040; margin:0 0 0.2rem 0;">🖼️ Category Story Circles & Demographic Model Photos</h3>
+                <p style="color:#64748b; font-size:0.8rem; margin:0;">Change model pictures, story circle icons, and demographic banners displayed on store front with real-time cloud sync.</p>
+              </div>
+              <div style="display:flex; gap:0.4rem; align-items:center;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="this.disabled=true; this.textContent='Refreshing...'; store.fetchSiteConfigsFromSupabase().then(()=>{ const m=document.getElementById('app-main'); if(m) m.innerHTML=UI.renderAdminDashboard('category_images'); });" style="font-size:0.72rem; padding:0.3rem 0.65rem; border-radius:6px; border-color:#cbd5e1; color:#000040;">
+                  🔄 Refresh Live Photos
+                </button>
+                <span style="background:#ecfdf5; color:#059669; font-size:0.72rem; font-weight:800; padding:3px 9px; border-radius:20px;">
+                  ⚡ Live Supabase Synced
+                </span>
+              </div>
             </div>
 
             <form onsubmit="window.saveCategoryImagesForm(event)" style="display:flex; flex-direction:column; gap:1.5rem; margin-top:1rem;">

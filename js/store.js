@@ -165,9 +165,12 @@ class Store {
     }
 
     // 9. Category & Demographic Banner Images State
-    // Always use DEFAULT_CATEGORY_IMAGES from data.js (clears stale cache)
-    localStorage.removeItem("lsw_category_images");
-    this.categoryImages = DEFAULT_CATEGORY_IMAGES;
+    try {
+      const saved = localStorage.getItem("lsw_category_images");
+      this.categoryImages = saved ? { ...DEFAULT_CATEGORY_IMAGES, ...JSON.parse(saved) } : DEFAULT_CATEGORY_IMAGES;
+    } catch {
+      this.categoryImages = DEFAULT_CATEGORY_IMAGES;
+    }
 
     // 10. Active coupon & UI
     this.appliedCoupon = null;
@@ -176,13 +179,15 @@ class Store {
     this.quickViewProductId = null;
     this.customizingProductId = null;
 
-    // Fetch live orders, products, and lens packages from Supabase DB on initialization
+    // Fetch live orders, products, lens packages, site configs & coupons from Supabase DB on initialization
     this.fetchOrdersFromSupabase();
     this.fetchProductsFromSupabase();
     this.fetchLensPackagesFromSupabase();
+    this.fetchSiteConfigsFromSupabase();
+    this.fetchCouponsFromSupabase();
   }
 
-  saveCategoryImages(images) {
+  saveCategoryImages(images, syncCloud = true) {
     this.categoryImages = { ...this.categoryImages, ...images };
     try {
       localStorage.setItem("lsw_category_images", JSON.stringify(this.categoryImages));
@@ -190,6 +195,15 @@ class Store {
       console.warn("Storage write error", e);
     }
     this.notify("CATEGORY_IMAGES_UPDATED", this.categoryImages);
+
+    if (syncCloud) {
+      fetch('/api/save-site-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'category_images', data: this.categoryImages })
+      }).then(() => console.log('✓ Category & Model photos synced to Supabase DB'))
+        .catch(err => console.warn('Supabase category images sync notice:', err));
+    }
   }
 
   getCatImg(key, fallback = "") {
@@ -256,11 +270,19 @@ class Store {
     }
   }
 
-  saveCategories() {
+  saveCategories(syncCloud = true) {
     try {
       localStorage.setItem("lsw_categories", JSON.stringify(this.categories));
     } catch (e) {
       console.error(e);
+    }
+    if (syncCloud) {
+      fetch('/api/save-site-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'categories', data: this.categories })
+      }).then(() => console.log('✓ Categories synced to Supabase DB'))
+        .catch(err => console.warn('Supabase categories sync notice:', err));
     }
   }
 
@@ -280,11 +302,19 @@ class Store {
     }
   }
 
-  saveStoreSettings() {
+  saveStoreSettings(syncCloud = true) {
     try {
       localStorage.setItem("lsw_settings", JSON.stringify(this.storeSettings));
     } catch (e) {
       console.error(e);
+    }
+    if (syncCloud) {
+      fetch('/api/save-site-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'store_settings', data: this.storeSettings })
+      }).then(() => console.log('✓ Store settings synced to Supabase DB'))
+        .catch(err => console.warn('Supabase store settings sync notice:', err));
     }
   }
 
@@ -603,7 +633,7 @@ class Store {
         const deletedIds = new Set(JSON.parse(localStorage.getItem("lsw_deleted_products") || "[]"));
         
         const dbProds = data.products
-          .filter(p => p && p.id && p.category !== 'lens-package' && !deletedIds.has(p.id))
+          .filter(p => p && p.id && p.category !== 'lens-package' && p.category !== 'site-config' && !deletedIds.has(p.id))
           .map(p => {
             const imgs = Array.isArray(p.images) && p.images.length > 0 
               ? p.images 
@@ -674,6 +704,54 @@ class Store {
       }
     } catch (e) {
       console.warn('Notice fetching Supabase lens packages:', e.message);
+    }
+  }
+
+  // Fetch live Site Configs (Category & Model Photos, Categories, Store Settings) from Supabase
+  async fetchSiteConfigsFromSupabase() {
+    try {
+      const res = await fetch('/api/get-site-config');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.success && data.configs) {
+        if (data.configs.category_images && typeof data.configs.category_images === 'object') {
+          this.categoryImages = { ...DEFAULT_CATEGORY_IMAGES, ...data.configs.category_images };
+          this.saveCategoryImages(this.categoryImages, false);
+          this.notify("CATEGORY_IMAGES_UPDATED", this.categoryImages);
+          console.log('✓ Synchronized live category & model photos from Supabase DB');
+        }
+        if (Array.isArray(data.configs.categories) && data.configs.categories.length > 0) {
+          this.categories = data.configs.categories;
+          this.saveCategories(false);
+          this.notify("categories_updated", this.categories);
+          console.log(`✓ Synchronized ${this.categories.length} categories from Supabase DB`);
+        }
+        if (data.configs.store_settings && typeof data.configs.store_settings === 'object') {
+          this.storeSettings = { ...STORE_INFO, ...data.configs.store_settings };
+          this.saveStoreSettings(false);
+          this.notify("settings_updated", this.storeSettings);
+          console.log('✓ Synchronized store settings from Supabase DB');
+        }
+      }
+    } catch (e) {
+      console.warn('Notice fetching site configs from Supabase:', e.message);
+    }
+  }
+
+  // Fetch live Coupons from Supabase
+  async fetchCouponsFromSupabase() {
+    try {
+      const res = await fetch('/api/get-coupons');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.success && data.coupons && Object.keys(data.coupons).length > 0) {
+        this.coupons = { ...COUPONS, ...data.coupons };
+        this.saveCoupons();
+        this.notify("coupons_updated", this.coupons);
+        console.log(`✓ Synchronized ${Object.keys(data.coupons).length} coupons from Supabase DB`);
+      }
+    } catch (e) {
+      console.warn('Notice fetching coupons from Supabase:', e.message);
     }
   }
 
@@ -1019,20 +1097,38 @@ class Store {
   }
 
   // Coupon Management
-  addCoupon(code, data) {
+  async addCoupon(code, data) {
     const upper = code.trim().toUpperCase();
     this.coupons[upper] = data;
     this.saveCoupons();
     this.showToast(`Coupon "${upper}" created!`, "success");
     this.notify("coupons_updated");
+
+    try {
+      await fetch('/api/save-coupon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      console.log('✓ Coupon synced to Supabase DB:', upper);
+    } catch (e) {
+      console.warn('Notice saving coupon to Supabase:', e);
+    }
   }
 
-  deleteCoupon(code) {
+  async deleteCoupon(code) {
     const upper = code.trim().toUpperCase();
     delete this.coupons[upper];
     this.saveCoupons();
     this.showToast(`Coupon "${upper}" removed.`, "info");
     this.notify("coupons_updated");
+
+    try {
+      await fetch(`/api/delete-coupon?code=${encodeURIComponent(upper)}`, { method: 'DELETE' });
+      console.log('✓ Coupon deletion synced to Supabase DB:', upper);
+    } catch (e) {
+      console.warn('Notice deleting coupon from Supabase:', e);
+    }
   }
 
   // Store Settings Management
