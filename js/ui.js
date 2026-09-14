@@ -1135,11 +1135,11 @@ export const UI = {
 
                     <label class="pdp-lens-type-pill">
                       <input type="radio" name="pdp-lens-choice" value="lenses" 
-                             onchange="document.getElementById('vision-type-section').style.display='block'; window.updatePdpTotal('${product.id}', 599, 'Anti-Glare ARC Lens');" />
+                             onchange="const fp = (store.lensPackages && store.lensPackages[0]) || { price: 599, name: 'Anti-Glare ARC Lens', id: 'anti-glare-arc' }; document.getElementById('vision-type-section').style.display='block'; window.updatePdpTotal('${product.id}', fp.price, fp.name, fp.id);" />
                       <div class="pill-content">
                         <div class="pill-title-row">
                           <span class="pill-name">Buy with Lens</span>
-                          <span class="pill-price">+₹599</span>
+                          <span class="pill-price">+${UI.formatPrice((store.lensPackages && store.lensPackages[0]?.price) || 599)}</span>
                         </div>
                         <span class="pill-desc">Power / Blue-Cut / Bifocal ready</span>
                       </div>
@@ -1153,11 +1153,13 @@ export const UI = {
                     </div>
 
                     <div class="pdp-vision-grid">
-                      ${store.lensPackages.map((lp, idx) => `
+                      ${(store.lensPackages && store.lensPackages.length > 0 ? store.lensPackages : [
+                        { id: 'anti-glare-arc', name: 'Anti-Glare ARC Lens', price: 599, tagline: 'Reduces glare & reflections for clear vision.', img: '/images/anti_glare_arc_lens.jpg' }
+                      ]).map((lp, idx) => `
                         <div class="pdp-vision-card ${idx === 0 ? 'selected' : ''}" 
-                             onclick="document.querySelectorAll('.pdp-vision-card').forEach(c=>c.classList.remove('selected')); this.classList.add('selected'); window.updatePdpTotal('${product.id}', ${lp.price}, '${lp.name}', '${lp.id}');"
+                             onclick="document.querySelectorAll('.pdp-vision-card').forEach(c=>c.classList.remove('selected')); this.classList.add('selected'); window.updatePdpTotal('${product.id}', ${lp.price}, '${lp.name.replace(/'/g, "\\'")}', '${lp.id}');"
                              style="display:flex; align-items:flex-start; gap:0.65rem; padding:0.65rem 0.75rem;">
-                          <img src="${lp.img}" alt="${lp.name}" style="width:44px; height:44px; object-fit:cover; border-radius:6px; border:1px solid #cbd5e1; flex-shrink:0; margin-top:2px; background:#fff;" />
+                          <img src="${lp.img || '/images/anti_glare_arc_lens.jpg'}" alt="${lp.name}" style="width:44px; height:44px; object-fit:cover; border-radius:6px; border:1px solid #cbd5e1; flex-shrink:0; margin-top:2px; background:#fff;" onerror="this.src='/images/anti_glare_arc_lens.jpg'" />
                           <div style="flex:1; min-width:0;">
                             <div class="pdp-vision-card-header" style="margin-bottom:0.25rem;">
                               <span class="pdp-vision-name" style="font-size:0.84rem; font-weight:800; color:#000040;">${lp.name}</span>
@@ -2297,39 +2299,67 @@ export const UI = {
             </div>
 
             <!-- Add / Edit Lens Form -->
-            <form onsubmit="window.saveLensPackageForm(event)" class="admin-inline-form">
+            <form onsubmit="window.saveLensPackageForm(event)" class="admin-inline-form" id="admin-lens-form" style="background:#fff; padding:1.1rem; border-radius:10px; border:1px solid #e2e8f0; display:flex; flex-direction:column; gap:0.9rem;">
               <input type="hidden" id="lens-id-input" value="" />
-              <div style="flex:1.2;">
-                <label class="admin-lbl">Lens Package Name</label>
-                <input type="text" id="lens-name-input" placeholder="e.g. Ultra Thin High-Index 1.67" class="admin-input" required />
+              
+              <div style="display:flex; gap:0.85rem; flex-wrap:wrap; align-items:flex-end;">
+                <!-- Image Preview & File Upload -->
+                <div style="display:flex; align-items:center; gap:0.6rem;">
+                  <img id="lens-img-preview" src="/images/anti_glare_arc_lens.jpg" alt="Preview" style="width:46px; height:46px; object-fit:cover; border-radius:8px; border:1.5px solid #cbd5e1; background:#f8fafc;" onerror="this.src='/images/anti_glare_arc_lens.jpg'" />
+                  <div>
+                    <label class="admin-lbl" style="margin-bottom:3px; display:block;">Lens Photo</label>
+                    <label class="btn btn-outline btn-sm" style="font-size:0.72rem; padding:0.25rem 0.55rem; cursor:pointer; display:inline-flex; align-items:center; gap:3px;">
+                      📁 Upload
+                      <input type="file" id="lens-img-file" accept="image/*" style="display:none;" onchange="window.handleLensPackageImageUpload(event)" />
+                    </label>
+                  </div>
+                </div>
+
+                <div style="flex:1; min-width:180px;">
+                  <label class="admin-lbl">Image URL (or upload left)</label>
+                  <input type="text" id="lens-img-input" value="/images/anti_glare_arc_lens.jpg" placeholder="e.g. /images/blue_cut_screen_lens.jpg" class="admin-input" oninput="document.getElementById('lens-img-preview').src = this.value || '/images/anti_glare_arc_lens.jpg'" />
+                </div>
+
+                <div style="flex:1.2; min-width:200px;">
+                  <label class="admin-lbl">Lens Package Name</label>
+                  <input type="text" id="lens-name-input" placeholder="e.g. Ultra Thin High-Index 1.67" class="admin-input" required />
+                </div>
+
+                <div style="flex:1.4; min-width:220px;">
+                  <label class="admin-lbl">Tagline / Summary</label>
+                  <input type="text" id="lens-tagline-input" placeholder="e.g. Slim profile for high powers" class="admin-input" required />
+                </div>
+
+                <div style="width:110px;">
+                  <label class="admin-lbl">Price (₹)</label>
+                  <input type="number" id="lens-price-input" placeholder="1299" class="admin-input" required />
+                </div>
+
+                <div style="width:110px;">
+                  <label class="admin-lbl">Badge Text</label>
+                  <input type="text" id="lens-badge-input" placeholder="Popular" class="admin-input" />
+                </div>
+
+                <div style="display:flex; gap:0.4rem; align-items:center;">
+                  <button type="submit" id="lens-submit-btn" class="btn btn-navy btn-sm" style="height:34px; padding:0 1.1rem;">Save Package</button>
+                  <button type="button" id="lens-reset-btn" class="btn btn-outline btn-sm" onclick="window.resetLensPackageForm()" style="height:34px; padding:0 0.8rem;">Cancel / New</button>
+                </div>
               </div>
-              <div style="flex:1;">
-                <label class="admin-lbl">Tagline / Summary</label>
-                <input type="text" id="lens-tagline-input" placeholder="e.g. Slim profile for high powers" class="admin-input" required />
-              </div>
-              <div style="width:130px;">
-                <label class="admin-lbl">Add-on Price (₹)</label>
-                <input type="number" id="lens-price-input" placeholder="1299" class="admin-input" required />
-              </div>
-              <div style="width:130px;">
-                <label class="admin-lbl">Badge Text</label>
-                <input type="text" id="lens-badge-input" placeholder="Popular" class="admin-input" />
-              </div>
-              <button type="submit" class="btn btn-navy btn-sm" style="height:34px; padding:0 1rem; align-self:flex-end;">Save Package</button>
             </form>
 
             <div class="admin-lens-grid" style="margin-top:1.25rem;">
               ${store.lensPackages.map(l => `
-                <div class="admin-item-card">
-                  <div>
-                    <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.2rem;">
+                <div class="admin-item-card" style="display:flex; align-items:center; gap:0.75rem;">
+                  <img src="${l.img || '/images/anti_glare_arc_lens.jpg'}" alt="${l.name}" style="width:48px; height:48px; object-fit:cover; border-radius:8px; border:1px solid #cbd5e1; background:#fff; flex-shrink:0;" onerror="this.src='/images/anti_glare_arc_lens.jpg'" />
+                  <div style="flex:1; min-width:0;">
+                    <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.2rem; flex-wrap:wrap;">
                       <strong style="color:#000040; font-size:0.9rem;">${l.name}</strong>
                       <span class="admin-tag-pill" style="background:#000040; color:#fff; font-size:0.7rem;">+${UI.formatPrice(l.price)}</span>
                       ${l.badge ? `<span class="admin-tag-pill">${l.badge}</span>` : ''}
                     </div>
                     <small style="color:#64748b; font-size:0.72rem; line-height:1.25; display:block;">${l.tagline}</small>
                   </div>
-                  <div style="display:flex; gap:0.3rem;">
+                  <div style="display:flex; gap:0.3rem; flex-shrink:0;">
                     <button type="button" class="admin-action-btn edit" onclick="window.editLensPackageAdmin('${l.id}')">✏️ Edit</button>
                     <button type="button" class="admin-action-btn delete" onclick="window.deleteLensPackageAdmin('${l.id}')">🗑️</button>
                   </div>

@@ -1682,6 +1682,64 @@ window.deleteCategoryAdmin = function(key) {
 };
 
 // Lens Packages Handlers
+window.handleLensPackageImageUpload = function(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const rawData = e.target.result;
+    const img = new Image();
+    img.onload = function() {
+      const maxDim = 400;
+      let width = img.width, height = img.height;
+      if (width > height && width > maxDim) {
+        height = Math.round((height * maxDim) / width);
+        width = maxDim;
+      } else if (height > maxDim) {
+        width = Math.round((width * maxDim) / height);
+        height = maxDim;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      const compressed = canvas.toDataURL('image/jpeg', 0.85);
+      
+      const imgInput = document.getElementById('lens-img-input');
+      const imgPreview = document.getElementById('lens-img-preview');
+      if (imgInput) imgInput.value = compressed;
+      if (imgPreview) imgPreview.src = compressed;
+    };
+    img.onerror = () => {
+      const imgInput = document.getElementById('lens-img-input');
+      const imgPreview = document.getElementById('lens-img-preview');
+      if (imgInput) imgInput.value = rawData;
+      if (imgPreview) imgPreview.src = rawData;
+    };
+    img.src = rawData;
+  };
+  reader.readAsDataURL(file);
+};
+
+window.resetLensPackageForm = function() {
+  const idInput = document.getElementById('lens-id-input');
+  const nameInput = document.getElementById('lens-name-input');
+  const taglineInput = document.getElementById('lens-tagline-input');
+  const priceInput = document.getElementById('lens-price-input');
+  const badgeInput = document.getElementById('lens-badge-input');
+  const imgInput = document.getElementById('lens-img-input');
+  const imgPreview = document.getElementById('lens-img-preview');
+  const submitBtn = document.getElementById('lens-submit-btn');
+
+  if (idInput) idInput.value = '';
+  if (nameInput) nameInput.value = '';
+  if (taglineInput) taglineInput.value = '';
+  if (priceInput) priceInput.value = '';
+  if (badgeInput) badgeInput.value = '';
+  if (imgInput) imgInput.value = '/images/anti_glare_arc_lens.jpg';
+  if (imgPreview) imgPreview.src = '/images/anti_glare_arc_lens.jpg';
+  if (submitBtn) submitBtn.textContent = 'Save Package';
+};
+
 window.editLensPackageAdmin = function(lensId) {
   const pkg = store.lensPackages.find(l => l.id === lensId);
   if (!pkg) return;
@@ -1690,6 +1748,16 @@ window.editLensPackageAdmin = function(lensId) {
   document.getElementById('lens-tagline-input').value = pkg.tagline;
   document.getElementById('lens-price-input').value = pkg.price;
   document.getElementById('lens-badge-input').value = pkg.badge || '';
+
+  const imgVal = pkg.img || '/images/anti_glare_arc_lens.jpg';
+  const imgInput = document.getElementById('lens-img-input');
+  const imgPreview = document.getElementById('lens-img-preview');
+  if (imgInput) imgInput.value = imgVal;
+  if (imgPreview) imgPreview.src = imgVal;
+
+  const submitBtn = document.getElementById('lens-submit-btn');
+  if (submitBtn) submitBtn.textContent = 'Update Package';
+
   window.scrollTo({ top: 300, behavior: 'smooth' });
 };
 
@@ -1703,17 +1771,29 @@ window.saveLensPackageForm = async function(event) {
     submitBtn.textContent = 'Saving...';
   }
 
-  const id = document.getElementById('lens-id-input').value;
+  const id = document.getElementById('lens-id-input').value.trim();
   const name = document.getElementById('lens-name-input').value.trim();
   const tagline = document.getElementById('lens-tagline-input').value.trim();
   const price = parseFloat(document.getElementById('lens-price-input').value);
   const badge = document.getElementById('lens-badge-input').value.trim();
+  const img = document.getElementById('lens-img-input')?.value.trim() || '/images/anti_glare_arc_lens.jpg';
 
-  const pkgData = { name, tagline, price, badge, mrp: Math.round(price * 1.8) };
+  const isNew = !id;
+  const targetId = id || (name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || ('lens-pkg-' + Date.now()));
+
+  const pkgData = {
+    id: targetId,
+    name,
+    tagline,
+    price,
+    badge,
+    img,
+    mrp: Math.round(price * 1.8)
+  };
 
   try {
-    if (id) {
-      await store.updateLensPackage(id, pkgData);
+    if (!isNew) {
+      await store.updateLensPackage(targetId, pkgData);
     } else {
       await store.addLensPackage(pkgData);
     }
