@@ -2,20 +2,12 @@ import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import createCashfreeOrderHandler from './api/create-cashfree-order.js';
 import verifyCashfreeOrderHandler from './api/verify-cashfree-order.js';
-import getOrdersHandler from './api/get-orders.js';
-import saveOrderHandler from './api/save-order.js';
 import cashfreeWebhookHandler from './api/cashfree-webhook.js';
-import getProductsHandler from './api/get-products.js';
-import saveProductHandler from './api/save-product.js';
-import deleteProductHandler from './api/delete-product.js';
-import getLensPackagesHandler from './api/get-lens-packages.js';
-import saveLensPackageHandler from './api/save-lens-package.js';
-import deleteLensPackageHandler from './api/delete-lens-package.js';
-import getSiteConfigHandler from './api/get-site-config.js';
-import saveSiteConfigHandler from './api/save-site-config.js';
-import getCouponsHandler from './api/get-coupons.js';
-import saveCouponHandler from './api/save-coupon.js';
-import deleteCouponHandler from './api/delete-coupon.js';
+import productsHandler from './api/products.js';
+import ordersHandler from './api/orders.js';
+import couponsHandler from './api/coupons.js';
+import lensPackagesHandler from './api/lens-packages.js';
+import siteConfigHandler from './api/site-config.js';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -44,16 +36,20 @@ export default defineConfig(({ mode }) => {
               end: () => res.end()
             });
 
+            // Helper to parse body if present
+            const handleWithBody = (handler) => {
+              let bodyStr = '';
+              req.on('data', chunk => { bodyStr += chunk; });
+              req.on('end', async () => {
+                try { req.body = bodyStr ? JSON.parse(bodyStr) : {}; } catch { req.body = {}; }
+                req.query = Object.fromEntries(url.searchParams.entries());
+                await handler(req, createShimRes());
+              });
+            };
+
+            // Cashfree Endpoints
             if (url.pathname === '/api/create-cashfree-order') {
-              if (req.method === 'POST') {
-                let bodyStr = '';
-                req.on('data', chunk => { bodyStr += chunk; });
-                req.on('end', async () => {
-                  try { req.body = bodyStr ? JSON.parse(bodyStr) : {}; } catch { req.body = {}; }
-                  await createCashfreeOrderHandler(req, createShimRes());
-                });
-                return;
-              }
+              return handleWithBody(createCashfreeOrderHandler);
             }
 
             if (url.pathname === '/api/verify-cashfree-order') {
@@ -62,122 +58,57 @@ export default defineConfig(({ mode }) => {
               return;
             }
 
-            if (url.pathname === '/api/get-orders') {
-              await getOrdersHandler(req, createShimRes());
-              return;
-            }
-
-            if (url.pathname === '/api/save-order') {
-              let bodyStr = '';
-              req.on('data', chunk => { bodyStr += chunk; });
-              req.on('end', async () => {
-                try { req.body = bodyStr ? JSON.parse(bodyStr) : {}; } catch { req.body = {}; }
-                await saveOrderHandler(req, createShimRes());
-              });
-              return;
-            }
-
             if (url.pathname === '/api/cashfree-webhook') {
-              let bodyStr = '';
-              req.on('data', chunk => { bodyStr += chunk; });
-              req.on('end', async () => {
-                try { req.body = bodyStr ? JSON.parse(bodyStr) : {}; } catch { req.body = {}; }
-                await cashfreeWebhookHandler(req, createShimRes());
-              });
-              return;
+              return handleWithBody(cashfreeWebhookHandler);
             }
 
-            if (url.pathname === '/api/get-products') {
-              await getProductsHandler(req, createShimRes());
-              return;
-            }
-
-            if (url.pathname === '/api/save-product') {
-              let bodyStr = '';
-              req.on('data', chunk => { bodyStr += chunk; });
-              req.on('end', async () => {
-                try { req.body = bodyStr ? JSON.parse(bodyStr) : {}; } catch { req.body = {}; }
-                await saveProductHandler(req, createShimRes());
-              });
-              return;
-            }
-
-            if (url.pathname === '/api/delete-product') {
-              let bodyStr = '';
-              req.on('data', chunk => { bodyStr += chunk; });
-              req.on('end', async () => {
-                req.query = Object.fromEntries(url.searchParams.entries());
-                try { req.body = bodyStr ? JSON.parse(bodyStr) : {}; } catch { req.body = {}; }
-                await deleteProductHandler(req, createShimRes());
-              });
-              return;
-            }
-
-            if (url.pathname === '/api/get-lens-packages') {
-              await getLensPackagesHandler(req, createShimRes());
-              return;
-            }
-
-            if (url.pathname === '/api/save-lens-package') {
-              let bodyStr = '';
-              req.on('data', chunk => { bodyStr += chunk; });
-              req.on('end', async () => {
-                try { req.body = bodyStr ? JSON.parse(bodyStr) : {}; } catch { req.body = {}; }
-                await saveLensPackageHandler(req, createShimRes());
-              });
-              return;
-            }
-
-            if (url.pathname === '/api/delete-lens-package') {
-              let bodyStr = '';
-              req.on('data', chunk => { bodyStr += chunk; });
-              req.on('end', async () => {
-                req.query = Object.fromEntries(url.searchParams.entries());
-                try { req.body = bodyStr ? JSON.parse(bodyStr) : {}; } catch { req.body = {}; }
-                await deleteLensPackageHandler(req, createShimRes());
-              });
-              return;
-            }
-
-            if (url.pathname === '/api/get-site-config') {
+            // Products (Consolidated + legacy aliases)
+            if (['/api/products', '/api/get-products', '/api/save-product', '/api/delete-product'].includes(url.pathname)) {
+              if (req.method === 'POST' || req.method === 'DELETE') {
+                return handleWithBody(productsHandler);
+              }
               req.query = Object.fromEntries(url.searchParams.entries());
-              await getSiteConfigHandler(req, createShimRes());
+              await productsHandler(req, createShimRes());
               return;
             }
 
-            if (url.pathname === '/api/save-site-config') {
-              let bodyStr = '';
-              req.on('data', chunk => { bodyStr += chunk; });
-              req.on('end', async () => {
-                try { req.body = bodyStr ? JSON.parse(bodyStr) : {}; } catch { req.body = {}; }
-                await saveSiteConfigHandler(req, createShimRes());
-              });
+            // Orders (Consolidated + legacy aliases)
+            if (['/api/orders', '/api/get-orders', '/api/save-order'].includes(url.pathname)) {
+              if (req.method === 'POST') {
+                return handleWithBody(ordersHandler);
+              }
+              req.query = Object.fromEntries(url.searchParams.entries());
+              await ordersHandler(req, createShimRes());
               return;
             }
 
-            if (url.pathname === '/api/get-coupons') {
-              await getCouponsHandler(req, createShimRes());
+            // Coupons (Consolidated + legacy aliases)
+            if (['/api/coupons', '/api/get-coupons', '/api/save-coupon', '/api/delete-coupon'].includes(url.pathname)) {
+              if (req.method === 'POST' || req.method === 'DELETE') {
+                return handleWithBody(couponsHandler);
+              }
+              req.query = Object.fromEntries(url.searchParams.entries());
+              await couponsHandler(req, createShimRes());
               return;
             }
 
-            if (url.pathname === '/api/save-coupon') {
-              let bodyStr = '';
-              req.on('data', chunk => { bodyStr += chunk; });
-              req.on('end', async () => {
-                try { req.body = bodyStr ? JSON.parse(bodyStr) : {}; } catch { req.body = {}; }
-                await saveCouponHandler(req, createShimRes());
-              });
+            // Lens Packages (Consolidated + legacy aliases)
+            if (['/api/lens-packages', '/api/get-lens-packages', '/api/save-lens-package', '/api/delete-lens-package'].includes(url.pathname)) {
+              if (req.method === 'POST' || req.method === 'DELETE') {
+                return handleWithBody(lensPackagesHandler);
+              }
+              req.query = Object.fromEntries(url.searchParams.entries());
+              await lensPackagesHandler(req, createShimRes());
               return;
             }
 
-            if (url.pathname === '/api/delete-coupon') {
-              let bodyStr = '';
-              req.on('data', chunk => { bodyStr += chunk; });
-              req.on('end', async () => {
-                req.query = Object.fromEntries(url.searchParams.entries());
-                try { req.body = bodyStr ? JSON.parse(bodyStr) : {}; } catch { req.body = {}; }
-                await deleteCouponHandler(req, createShimRes());
-              });
+            // Site Config (Consolidated + legacy aliases)
+            if (['/api/site-config', '/api/get-site-config', '/api/save-site-config'].includes(url.pathname)) {
+              if (req.method === 'POST') {
+                return handleWithBody(siteConfigHandler);
+              }
+              req.query = Object.fromEntries(url.searchParams.entries());
+              await siteConfigHandler(req, createShimRes());
               return;
             }
 

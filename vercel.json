@@ -1,8 +1,18 @@
 {
   "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+    { "source": "/api/get-products", "destination": "/api/products" },
+    { "source": "/api/save-product", "destination": "/api/products" },
+    { "source": "/api/delete-product", "destination": "/api/products" },
+    { "source": "/api/get-orders", "destination": "/api/orders" },
+    { "source": "/api/save-order", "destination": "/api/orders" },
+    { "source": "/api/get-coupons", "destination": "/api/coupons" },
+    { "source": "/api/save-coupon", "destination": "/api/coupons" },
+    { "source": "/api/delete-coupon", "destination": "/api/coupons" },
+    { "source": "/api/get-lens-packages", "destination": "/api/lens-packages" },
+    { "source": "/api/save-lens-package", "destination": "/api/lens-packages" },
+    { "source": "/api/delete-lens-package", "destination": "/api/lens-packages" },
+    { "source": "/api/get-site-config", "destination": "/api/site-config" },
+    { "source": "/api/save-site-config", "destination": "/api/site-config" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

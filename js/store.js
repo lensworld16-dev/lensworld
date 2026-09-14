@@ -197,7 +197,7 @@ class Store {
     this.notify("CATEGORY_IMAGES_UPDATED", this.categoryImages);
 
     if (syncCloud) {
-      fetch('/api/save-site-config', {
+      fetch('/api/site-config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key: 'category_images', data: this.categoryImages })
@@ -277,7 +277,7 @@ class Store {
       console.error(e);
     }
     if (syncCloud) {
-      fetch('/api/save-site-config', {
+      fetch('/api/site-config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key: 'categories', data: this.categories })
@@ -309,7 +309,7 @@ class Store {
       console.error(e);
     }
     if (syncCloud) {
-      fetch('/api/save-site-config', {
+      fetch('/api/site-config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key: 'store_settings', data: this.storeSettings })
@@ -558,7 +558,7 @@ class Store {
     this.notify("order_placed", newOrder);
 
     // Synchronize to Supabase DB so order is saved globally for Admin
-    fetch('/api/save-order', {
+    fetch('/api/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newOrder)
@@ -572,7 +572,7 @@ class Store {
   // Fetch live orders from Supabase DB (Global cross-device Admin sync)
   async fetchOrdersFromSupabase() {
     try {
-      const res = await fetch('/api/get-orders');
+      const res = await fetch('/api/orders');
       if (!res.ok) return;
       const data = await res.json();
       if (data.success && Array.isArray(data.orders)) {
@@ -626,7 +626,7 @@ class Store {
   // Fetch live products from Supabase DB (Global cross-device live cloud sync)
   async fetchProductsFromSupabase() {
     try {
-      const res = await fetch('/api/get-products');
+      const res = await fetch('/api/products');
       if (!res.ok) return;
       const data = await res.json();
       if (data.success && Array.isArray(data.products) && data.products.length > 0) {
@@ -693,7 +693,7 @@ class Store {
   // Fetch live lens packages from Supabase DB (Global cross-device live sync)
   async fetchLensPackagesFromSupabase() {
     try {
-      const res = await fetch('/api/get-lens-packages');
+      const res = await fetch('/api/lens-packages');
       if (!res.ok) return;
       const data = await res.json();
       if (data.success && Array.isArray(data.packages) && data.packages.length > 0) {
@@ -710,7 +710,7 @@ class Store {
   // Fetch live Site Configs (Category & Model Photos, Categories, Store Settings) from Supabase
   async fetchSiteConfigsFromSupabase() {
     try {
-      const res = await fetch('/api/get-site-config');
+      const res = await fetch('/api/site-config');
       if (!res.ok) return;
       const data = await res.json();
       if (data.success && data.configs) {
@@ -741,7 +741,7 @@ class Store {
   // Fetch live Coupons from Supabase
   async fetchCouponsFromSupabase() {
     try {
-      const res = await fetch('/api/get-coupons');
+      const res = await fetch('/api/coupons');
       if (!res.ok) return;
       const data = await res.json();
       if (data.success && data.coupons && Object.keys(data.coupons).length > 0) {
@@ -782,7 +782,7 @@ class Store {
       this.notify("admin_order_updated", order);
 
       // Async update in Supabase
-      fetch('/api/save-order', {
+      fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(order)
@@ -819,7 +819,7 @@ class Store {
 
       // Sync updated product to Supabase cloud database
       try {
-        await fetch('/api/save-product', {
+        await fetch('/api/products', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(this.products[idx])
@@ -859,7 +859,7 @@ class Store {
 
     // Save product to Supabase cloud database so all devices and phones see it immediately!
     try {
-      const res = await fetch('/api/save-product', {
+      const res = await fetch('/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(productWithId)
@@ -889,8 +889,8 @@ class Store {
 
     // Delete from Supabase cloud database
     try {
-      await fetch(`/api/delete-product?id=${encodeURIComponent(productId)}`, {
-        method: 'POST',
+      await fetch(`/api/products?id=${encodeURIComponent(productId)}`, {
+        method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: productId })
       });
@@ -914,8 +914,8 @@ class Store {
 
     // Delete in Supabase cloud database
     productIds.forEach(id => {
-      fetch(`/api/delete-product?id=${encodeURIComponent(id)}`, {
-        method: 'POST',
+      fetch(`/api/products?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id })
       }).catch(err => console.warn('Supabase bulk delete notice:', err));
@@ -1046,7 +1046,7 @@ class Store {
 
     // Live sync to Supabase
     try {
-      await fetch('/api/save-lens-package', {
+      await fetch('/api/lens-packages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(fullPkg)
@@ -1067,7 +1067,7 @@ class Store {
 
       // Live sync to Supabase
       try {
-        await fetch('/api/save-lens-package', {
+        await fetch('/api/lens-packages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...this.lensPackages[idx], id })
@@ -1087,7 +1087,7 @@ class Store {
 
     // Live sync to Supabase
     try {
-      await fetch(`/api/delete-lens-package?id=${encodeURIComponent(id)}`, {
+      await fetch(`/api/lens-packages?id=${encodeURIComponent(id)}`, {
         method: 'DELETE'
       });
       console.log('✓ Lens package deletion synced to Supabase DB:', id);
@@ -1105,7 +1105,7 @@ class Store {
     this.notify("coupons_updated");
 
     try {
-      await fetch('/api/save-coupon', {
+      await fetch('/api/coupons', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -1124,7 +1124,7 @@ class Store {
     this.notify("coupons_updated");
 
     try {
-      await fetch(`/api/delete-coupon?code=${encodeURIComponent(upper)}`, { method: 'DELETE' });
+      await fetch(`/api/coupons?code=${encodeURIComponent(upper)}`, { method: 'DELETE' });
       console.log('✓ Coupon deletion synced to Supabase DB:', upper);
     } catch (e) {
       console.warn('Notice deleting coupon from Supabase:', e);
