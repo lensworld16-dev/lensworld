@@ -142,8 +142,8 @@ class Store {
 
     // 6. Lens Packages State
     try {
-      this.lensPackages = LENS_PACKAGES;
-      localStorage.setItem("lsw_lens_packages", JSON.stringify(LENS_PACKAGES));
+      const saved = localStorage.getItem("lsw_lens_packages");
+      this.lensPackages = saved ? JSON.parse(saved) : LENS_PACKAGES;
     } catch {
       this.lensPackages = LENS_PACKAGES;
     }
@@ -176,9 +176,10 @@ class Store {
     this.quickViewProductId = null;
     this.customizingProductId = null;
 
-    // Fetch live orders and products from Supabase DB on initialization
+    // Fetch live orders, products, and lens packages from Supabase DB on initialization
     this.fetchOrdersFromSupabase();
     this.fetchProductsFromSupabase();
+    this.fetchLensPackagesFromSupabase();
   }
 
   saveCategoryImages(images) {
@@ -602,7 +603,7 @@ class Store {
         const deletedIds = new Set(JSON.parse(localStorage.getItem("lsw_deleted_products") || "[]"));
         
         const dbProds = data.products
-          .filter(p => p && p.id && !deletedIds.has(p.id))
+          .filter(p => p && p.id && p.category !== 'lens-package' && !deletedIds.has(p.id))
           .map(p => {
             const imgs = Array.isArray(p.images) && p.images.length > 0 
               ? p.images 
@@ -656,6 +657,23 @@ class Store {
       }
     } catch (e) {
       console.warn('Notice fetching Supabase products:', e.message);
+    }
+  }
+
+  // Fetch live lens packages from Supabase DB (Global cross-device live sync)
+  async fetchLensPackagesFromSupabase() {
+    try {
+      const res = await fetch('/api/get-lens-packages');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.success && Array.isArray(data.packages) && data.packages.length > 0) {
+        this.lensPackages = data.packages;
+        this.saveLensPackages();
+        this.notify("lens_packages_updated", this.lensPackages);
+        console.log(`✓ Synchronized ${data.packages.length} lens packages live from Supabase DB`);
+      }
+    } catch (e) {
+      console.warn('Notice fetching Supabase lens packages:', e.message);
     }
   }
 
@@ -940,29 +958,64 @@ class Store {
   }
 
   // Lens Package Management
-  addLensPackage(pkg) {
-    const id = pkg.id || pkg.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    this.lensPackages.push({ ...pkg, id });
+  async addLensPackage(pkg) {
+    const id = pkg.id || pkg.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const fullPkg = { ...pkg, id };
+    this.lensPackages.push(fullPkg);
     this.saveLensPackages();
     this.showToast(`Lens package "${pkg.name}" added!`, "success");
     this.notify("lens_packages_updated");
+
+    // Live sync to Supabase
+    try {
+      await fetch('/api/save-lens-package', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fullPkg)
+      });
+      console.log('✓ Lens package synced to Supabase DB:', id);
+    } catch (err) {
+      console.warn('Supabase lens package save notice:', err);
+    }
   }
 
-  updateLensPackage(id, updatedData) {
+  async updateLensPackage(id, updatedData) {
     const idx = this.lensPackages.findIndex(l => l.id === id);
     if (idx > -1) {
       this.lensPackages[idx] = { ...this.lensPackages[idx], ...updatedData };
       this.saveLensPackages();
       this.showToast("Lens package updated!", "success");
       this.notify("lens_packages_updated");
+
+      // Live sync to Supabase
+      try {
+        await fetch('/api/save-lens-package', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...this.lensPackages[idx], id })
+        });
+        console.log('✓ Lens package update synced to Supabase DB:', id);
+      } catch (err) {
+        console.warn('Supabase lens package update notice:', err);
+      }
     }
   }
 
-  deleteLensPackage(id) {
+  async deleteLensPackage(id) {
     this.lensPackages = this.lensPackages.filter(l => l.id !== id);
     this.saveLensPackages();
     this.showToast("Lens package removed.", "info");
     this.notify("lens_packages_updated");
+
+    // Live sync to Supabase
+    try {
+      await fetch(`/api/delete-lens-package?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE'
+      });
+      console.log('✓ Lens package deletion synced to Supabase DB:', id);
+    } catch (err) {
+      console.warn('Supabase lens package delete notice:', err);
+    }
   }
 
   // Coupon Management

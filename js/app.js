@@ -482,7 +482,7 @@ window.AppEvents = {
       return;
     }
 
-    let selectedPackage = LENS_PACKAGES[0];
+    let selectedPackage = (store.lensPackages && store.lensPackages.length > 0) ? store.lensPackages[0] : LENS_PACKAGES[0];
 
     container.innerHTML = `
       <div style="margin-bottom:0.75rem;">
@@ -501,7 +501,7 @@ window.AppEvents = {
           Step 1: Select Lens Type
         </div>
         <div style="display:flex; flex-direction:column; gap:0.45rem;">
-          ${LENS_PACKAGES.map((lens) => `
+          ${(store.lensPackages && store.lensPackages.length > 0 ? store.lensPackages : LENS_PACKAGES).map((lens) => `
             <div class="lens-option-card ${lens.id === selectedPackage.id ? 'selected' : ''}" 
                  style="border:1.5px solid ${lens.id === selectedPackage.id ? '#000040' : '#e2e8f0'}; border-radius:8px; padding:0.6rem 0.85rem; display:flex; align-items:center; gap:0.65rem; cursor:pointer; background:${lens.id === selectedPackage.id ? '#f8fafc' : '#fff'}; transition:all 0.2s ease;"
                  onclick="window.AppEvents.selectLensOption(this, '${lens.id}', ${product.price}, ${lens.price})">
@@ -708,9 +708,10 @@ window.AppEvents = {
         prescriptionFile
       });
     } else {
+      const defaultPkg = (store.lensPackages && store.lensPackages.length > 0) ? store.lensPackages[0] : LENS_PACKAGES[0];
       const selectedRadio = document.querySelector('input[name="modal-lens"]:checked');
-      const lensId = selectedRadio ? selectedRadio.value : LENS_PACKAGES[0].id;
-      const selectedLens = LENS_PACKAGES.find(l => l.id === lensId) || LENS_PACKAGES[0];
+      const lensId = selectedRadio ? selectedRadio.value : defaultPkg.id;
+      const selectedLens = (store.lensPackages && store.lensPackages.find(l => l.id === lensId)) || defaultPkg;
 
       store.addToCart(product, {
         selectedLens,
@@ -1692,8 +1693,16 @@ window.editLensPackageAdmin = function(lensId) {
   window.scrollTo({ top: 300, behavior: 'smooth' });
 };
 
-window.saveLensPackageForm = function(event) {
+window.saveLensPackageForm = async function(event) {
   event.preventDefault();
+  const form = event.target;
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const origText = submitBtn ? submitBtn.textContent : 'Save Package';
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving...';
+  }
+
   const id = document.getElementById('lens-id-input').value;
   const name = document.getElementById('lens-name-input').value.trim();
   const tagline = document.getElementById('lens-tagline-input').value.trim();
@@ -1702,19 +1711,23 @@ window.saveLensPackageForm = function(event) {
 
   const pkgData = { name, tagline, price, badge, mrp: Math.round(price * 1.8) };
 
-  if (id) {
-    store.updateLensPackage(id, pkgData);
-  } else {
-    store.addLensPackage(pkgData);
+  try {
+    if (id) {
+      await store.updateLensPackage(id, pkgData);
+    } else {
+      await store.addLensPackage(pkgData);
+    }
+  } catch (err) {
+    console.error('Error saving lens package:', err);
   }
 
   const mainApp = document.getElementById('app-main');
   if (mainApp) mainApp.innerHTML = UI.renderAdminDashboard('lenses');
 };
 
-window.deleteLensPackageAdmin = function(lensId) {
-  if (confirm('Delete this lens package?')) {
-    store.deleteLensPackage(lensId);
+window.deleteLensPackageAdmin = async function(lensId) {
+  if (confirm('Delete this lens package from store & cloud database?')) {
+    await store.deleteLensPackage(lensId);
     const mainApp = document.getElementById('app-main');
     if (mainApp) mainApp.innerHTML = UI.renderAdminDashboard('lenses');
   }

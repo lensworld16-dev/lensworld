@@ -389,7 +389,7 @@ export const UI = {
           </div>
 
           <div class="lens-guide-grid">
-            ${LENS_PACKAGES.map(lp => {
+            ${(store.lensPackages && store.lensPackages.length > 0 ? store.lensPackages : LENS_PACKAGES).map(lp => {
               const lensProductMap = {
                 'anti-glare-arc': 'lens-s-world-anti-glare-arc-lens-pair',
                 'blue-cut-screen': 'lens-s-world-blue-cut-lens-pair',
@@ -2281,9 +2281,19 @@ export const UI = {
         <!-- Tab 3: Lens Packages & Prices -->
         ${activeTab === 'lenses' ? `
           <div class="admin-section-box">
-            <div class="admin-box-header">
-              <h3>💎 Prescription Lens Packages & Add-on Pricing</h3>
-              <p>Configure Anti-Glare, Blue Cut, Photochromic Transition, and Progressive lens prices.</p>
+            <div class="admin-box-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+              <div>
+                <h3 style="font-size:1.15rem; font-weight:800; color:#000040; margin:0 0 0.2rem 0;">💎 Prescription Lens Packages & Add-on Pricing</h3>
+                <p style="color:#64748b; font-size:0.8rem; margin:0;">Configure Anti-Glare, Blue Cut, Photochromic Transition, and Progressive lens prices with real-time cloud sync.</p>
+              </div>
+              <div style="display:flex; gap:0.4rem; align-items:center;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="this.disabled=true; this.textContent='Refreshing...'; store.fetchLensPackagesFromSupabase().then(()=>{ const m=document.getElementById('app-main'); if(m) m.innerHTML=UI.renderAdminDashboard('lenses'); });" style="font-size:0.72rem; padding:0.3rem 0.65rem; border-radius:6px; border-color:#cbd5e1; color:#000040;">
+                  🔄 Refresh Live Packages
+                </button>
+                <span style="background:#ecfdf5; color:#059669; font-size:0.72rem; font-weight:800; padding:3px 9px; border-radius:20px;">
+                  ⚡ Live Supabase Synced
+                </span>
+              </div>
             </div>
 
             <!-- Add / Edit Lens Form -->

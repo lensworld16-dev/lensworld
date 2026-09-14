@@ -8,6 +8,9 @@ import cashfreeWebhookHandler from './api/cashfree-webhook.js';
 import getProductsHandler from './api/get-products.js';
 import saveProductHandler from './api/save-product.js';
 import deleteProductHandler from './api/delete-product.js';
+import getLensPackagesHandler from './api/get-lens-packages.js';
+import saveLensPackageHandler from './api/save-lens-package.js';
+import deleteLensPackageHandler from './api/delete-lens-package.js';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -101,6 +104,32 @@ export default defineConfig(({ mode }) => {
                 req.query = Object.fromEntries(url.searchParams.entries());
                 try { req.body = bodyStr ? JSON.parse(bodyStr) : {}; } catch { req.body = {}; }
                 await deleteProductHandler(req, createShimRes());
+              });
+              return;
+            }
+
+            if (url.pathname === '/api/get-lens-packages') {
+              await getLensPackagesHandler(req, createShimRes());
+              return;
+            }
+
+            if (url.pathname === '/api/save-lens-package') {
+              let bodyStr = '';
+              req.on('data', chunk => { bodyStr += chunk; });
+              req.on('end', async () => {
+                try { req.body = bodyStr ? JSON.parse(bodyStr) : {}; } catch { req.body = {}; }
+                await saveLensPackageHandler(req, createShimRes());
+              });
+              return;
+            }
+
+            if (url.pathname === '/api/delete-lens-package') {
+              let bodyStr = '';
+              req.on('data', chunk => { bodyStr += chunk; });
+              req.on('end', async () => {
+                req.query = Object.fromEntries(url.searchParams.entries());
+                try { req.body = bodyStr ? JSON.parse(bodyStr) : {}; } catch { req.body = {}; }
+                await deleteLensPackageHandler(req, createShimRes());
               });
               return;
             }

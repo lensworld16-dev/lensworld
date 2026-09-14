@@ -73,6 +73,20 @@ CREATE TABLE IF NOT EXISTS public.coupons (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 5. LENS PACKAGES TABLE
+CREATE TABLE IF NOT EXISTS public.lens_packages (
+    id TEXT PRIMARY KEY,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    name TEXT NOT NULL,
+    tagline TEXT,
+    price NUMERIC NOT NULL DEFAULT 0,
+    mrp NUMERIC,
+    badge TEXT,
+    img TEXT,
+    description TEXT,
+    features JSONB DEFAULT '[]'::jsonb
+);
+
 -- ========================================================
 -- ENABLE ROW LEVEL SECURITY (RLS) & POLICIES
 -- ========================================================
@@ -81,6 +95,7 @@ ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.inquiries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.coupons ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.lens_packages ENABLE ROW LEVEL SECURITY;
 
 -- Orders Policies: Anyone can create an order and read orders
 DROP POLICY IF EXISTS "Public can insert orders" ON public.orders;
@@ -116,6 +131,19 @@ CREATE POLICY "Public can view inquiries" ON public.inquiries FOR SELECT USING (
 DROP POLICY IF EXISTS "Public can view coupons" ON public.coupons;
 CREATE POLICY "Public can view coupons" ON public.coupons FOR SELECT USING (true);
 
+-- Lens Packages Policies
+DROP POLICY IF EXISTS "Public can view lens_packages" ON public.lens_packages;
+CREATE POLICY "Public can view lens_packages" ON public.lens_packages FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public can insert lens_packages" ON public.lens_packages;
+CREATE POLICY "Public can insert lens_packages" ON public.lens_packages FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public can update lens_packages" ON public.lens_packages;
+CREATE POLICY "Public can update lens_packages" ON public.lens_packages FOR UPDATE USING (true);
+
+DROP POLICY IF EXISTS "Public can delete lens_packages" ON public.lens_packages;
+CREATE POLICY "Public can delete lens_packages" ON public.lens_packages FOR DELETE USING (true);
+
 -- ========================================================
 -- INSERT DEFAULT COUPONS
 -- ========================================================
@@ -126,3 +154,15 @@ VALUES
     ('FREESHIP', 'FREESHIP', 'flat', 99, 0, 'Free Express Shipping Across India', true),
     ('SUMMER50', 'SUMMER50', 'percent', 50, 2499, '50% off on premium frames (Min ₹2,499)', true)
 ON CONFLICT (id) DO NOTHING;
+
+-- ========================================================
+-- INSERT DEFAULT LENS PACKAGES
+-- ========================================================
+INSERT INTO public.lens_packages (id, name, tagline, price, mrp, badge, img)
+VALUES 
+    ('anti-glare-arc', 'Anti-Glare ARC Lens', 'Reduces glare & reflections for clear vision.', 599, 1199, 'Essential', '/images/anti_glare_arc_lens.jpg'),
+    ('blue-cut-screen', 'Blue Cut Screen Lens', 'Blocks harmful digital screen blue light.', 999, 1799, 'Most Popular', '/images/blue_cut_screen_lens.jpg'),
+    ('photochromic-transition', 'Photochromic Transition Lens', 'Darkens outdoors, clear indoors adaptively.', 1499, 2699, 'Smart Adapt', '/images/photochromic_transition_lens.jpg'),
+    ('progressive-multifocal', 'Progressive / Multifocal Lens', 'Near, intermediate & far vision in one lens.', 2199, 3899, 'Premium HD', '/images/progressive_multifocal_lens.png')
+ON CONFLICT (id) DO NOTHING;
+

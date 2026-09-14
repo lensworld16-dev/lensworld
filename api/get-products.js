@@ -17,7 +17,7 @@ export default async function handler(req, res) {
   const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_4Dekhuqa35f4JvkQ_QYRXw_5ZP-NjVd';
 
   try {
-    const response = await fetch(`${supabaseUrl}/rest/v1/products?select=*&order=created_at.desc`, {
+    const response = await fetch(`${supabaseUrl}/rest/v1/products?category=neq.lens-package&select=*&order=created_at.desc`, {
       method: 'GET',
       headers: {
         'apikey': supabaseAnonKey,
