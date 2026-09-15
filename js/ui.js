@@ -2698,7 +2698,7 @@ export const UI = {
                 <p style="color:#64748b; font-size:0.8rem; margin:0;">Change model pictures, story circle icons, and demographic banners displayed on store front with real-time cloud sync.</p>
               </div>
               <div style="display:flex; gap:0.4rem; align-items:center;">
-                <button type="button" class="btn btn-outline btn-sm" onclick="this.disabled=true; this.textContent='Refreshing...'; store.fetchSiteConfigsFromSupabase().then(()=>{ const m=document.getElementById('app-main'); if(m) m.innerHTML=UI.renderAdminDashboard('category_images'); });" style="font-size:0.72rem; padding:0.3rem 0.65rem; border-radius:6px; border-color:#cbd5e1; color:#000040;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="this.disabled=true; this.textContent='Refreshing...'; store.fetchSiteConfigsFromSupabase().then(()=>{ const m=document.getElementById('app-main'); if(m) m.innerHTML=UI.renderAdminDashboard('category_images'); store.showToast('✓ Live photos refreshed from Supabase'); });" style="font-size:0.72rem; padding:0.3rem 0.65rem; border-radius:6px; border-color:#cbd5e1; color:#000040;">
                   🔄 Refresh Live Photos
                 </button>
                 <span style="background:#ecfdf5; color:#059669; font-size:0.72rem; font-weight:800; padding:3px 9px; border-radius:20px;">
@@ -2707,12 +2707,19 @@ export const UI = {
               </div>
             </div>
 
+            <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:0.75rem 1rem; margin-top:0.75rem; font-size:0.8rem; color:#1e40af; display:flex; align-items:center; gap:0.6rem;">
+              <span>💡</span>
+              <div>
+                <strong>Instant Live Sync:</strong> You can either paste an Image URL directly or click <strong>Pick from Gallery</strong> to upload from your phone/PC. Uploaded photos are automatically compressed so they save and sync immediately across all devices!
+              </div>
+            </div>
+
             <form onsubmit="window.saveCategoryImagesForm(event)" style="display:flex; flex-direction:column; gap:1.5rem; margin-top:1rem;">
               
               <!-- Section A: Top Circular Stories -->
               <div>
                 <h4 style="color:#000040; font-size:0.95rem; margin-bottom:0.75rem; border-bottom:1px solid #e2e8f0; padding-bottom:0.4rem;">
-                  1. Top Circular Story Icons (Header)
+                  1. Top Circular Story Icons (Header Stories)
                 </h4>
                 <div class="admin-grid-3">
                   ${[
@@ -2727,10 +2734,10 @@ export const UI = {
                     <div class="admin-card-inner" style="background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem;">
                       <label class="admin-lbl" style="font-weight:700; color:#000040; margin-bottom:0.4rem; display:block;">${c.label}</label>
                       <div style="display:flex; gap:0.75rem; align-items:center;">
-                        <img id="prev_${c.id}" src="${store.getCatImg(c.id)}" style="width:52px; height:52px; border-radius:50%; object-fit:cover; border:2px solid #000040; flex-shrink:0; background:#f8fafc;" />
-                        <div style="flex:1;">
-                          <input type="hidden" id="catimg_${c.id}" value="${store.getCatImg(c.id)}" />
-                          <label class="btn btn-outline btn-sm" style="display:inline-flex; align-items:center; gap:0.3rem; font-size:0.72rem; cursor:pointer; width:100%; justify-content:center; padding:0.35rem 0.5rem; border-color:#cbd5e1; color:#000040;">
+                        <img id="prev_${c.id}" src="${store.getCatImg(c.id)}" style="width:54px; height:54px; border-radius:50%; object-fit:cover; border:2px solid #000040; flex-shrink:0; background:#f8fafc;" onerror="this.src='/images/lens world logo.png';" />
+                        <div style="flex:1; display:flex; flex-direction:column; gap:0.35rem;">
+                          <input type="text" id="catimg_${c.id}" value="${store.getCatImg(c.id)}" placeholder="Image URL or upload..." class="admin-input" style="height:30px; font-size:0.72rem; padding:0 0.5rem;" oninput="document.getElementById('prev_${c.id}').src = this.value;" />
+                          <label class="btn btn-outline btn-sm" style="display:inline-flex; align-items:center; gap:0.3rem; font-size:0.72rem; cursor:pointer; justify-content:center; padding:0.3rem 0.5rem; border-color:#cbd5e1; color:#000040;">
                             📁 Pick from Gallery
                             <input type="file" accept="image/*" style="display:none;" onchange="window.handleCategoryFileUpload(event, 'catimg_${c.id}', 'prev_${c.id}')" />
                           </label>
@@ -2746,7 +2753,7 @@ export const UI = {
                 <h4 style="color:#000040; font-size:0.95rem; margin-bottom:0.75rem; border-bottom:1px solid #e2e8f0; padding-bottom:0.4rem;">
                   2. Eyeglasses Demographic Grid (Men, Women, Kids, Unisex, Couple)
                 </h4>
-                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:1rem;">
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(210px, 1fr)); gap:1rem;">
                   ${[
                     { id: 'eye_men', label: '👨 Men Eyeglasses' },
                     { id: 'eye_women', label: '👩 Women Eyeglasses' },
@@ -2754,14 +2761,14 @@ export const UI = {
                     { id: 'eye_unisex', label: '👥 Unisex Eyeglasses' },
                     { id: 'eye_couple', label: '💑 Couple Eyeglasses' }
                   ].map(c => `
-                    <div class="admin-card-inner" style="background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem; text-align:center;">
-                      <label class="admin-lbl" style="font-weight:700; color:#000040; margin-bottom:0.4rem; display:block;">${c.label}</label>
-                      <div style="margin-bottom:0.5rem;">
-                        <img id="prev_${c.id}" src="${store.getCatImg(c.id)}" style="width:100%; height:120px; border-radius:8px; object-fit:cover; border:1px solid #cbd5e1; background:#f8fafc;" />
+                    <div class="admin-card-inner" style="background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem; text-align:center; display:flex; flex-direction:column; gap:0.4rem;">
+                      <label class="admin-lbl" style="font-weight:700; color:#000040; margin:0; display:block;">${c.label}</label>
+                      <div style="position:relative;">
+                        <img id="prev_${c.id}" src="${store.getCatImg(c.id)}" style="width:100%; height:130px; border-radius:8px; object-fit:cover; border:1px solid #cbd5e1; background:#f8fafc;" onerror="this.src='/images/lens world logo.png';" />
                       </div>
-                      <input type="hidden" id="catimg_${c.id}" value="${store.getCatImg(c.id)}" />
-                      <label class="btn btn-outline btn-sm" style="display:inline-flex; align-items:center; gap:0.3rem; font-size:0.75rem; cursor:pointer; width:100%; justify-content:center; padding:0.4rem 0.5rem; border-color:#cbd5e1; color:#000040;">
-                        📁 Upload from Gallery
+                      <input type="text" id="catimg_${c.id}" value="${store.getCatImg(c.id)}" placeholder="Image URL or upload..." class="admin-input" style="height:30px; font-size:0.72rem; padding:0 0.5rem; width:100%;" oninput="document.getElementById('prev_${c.id}').src = this.value;" />
+                      <label class="btn btn-outline btn-sm" style="display:inline-flex; align-items:center; gap:0.3rem; font-size:0.75rem; cursor:pointer; width:100%; justify-content:center; padding:0.38rem 0.5rem; border-color:#cbd5e1; color:#000040;">
+                        📁 Pick from Gallery
                         <input type="file" accept="image/*" style="display:none;" onchange="window.handleCategoryFileUpload(event, 'catimg_${c.id}', 'prev_${c.id}')" />
                       </label>
                     </div>
@@ -2774,7 +2781,7 @@ export const UI = {
                 <h4 style="color:#000040; font-size:0.95rem; margin-bottom:0.75rem; border-bottom:1px solid #e2e8f0; padding-bottom:0.4rem;">
                   3. Sunglasses Grid (Men, Women, Kids, Unisex, Couple, Clip-on, Sports, Meta AI)
                 </h4>
-                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:1rem;">
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(210px, 1fr)); gap:1rem;">
                   ${[
                     { id: 'sun_men', label: '🕶️ Men Sunglasses' },
                     { id: 'sun_women', label: '🕶️ Women Sunglasses' },
@@ -2785,14 +2792,39 @@ export const UI = {
                     { id: 'sun_sports', label: '🚴 Sports Sunglasses' },
                     { id: 'sun_meta_ai', label: '🤖 Meta AI Sunglasses' }
                   ].map(c => `
-                    <div class="admin-card-inner" style="background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem; text-align:center;">
-                      <label class="admin-lbl" style="font-weight:700; color:#000040; margin-bottom:0.4rem; display:block;">${c.label}</label>
-                      <div style="margin-bottom:0.5rem;">
-                        <img id="prev_${c.id}" src="${store.getCatImg(c.id)}" style="width:100%; height:120px; border-radius:8px; object-fit:cover; border:1px solid #cbd5e1; background:#f8fafc;" />
+                    <div class="admin-card-inner" style="background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem; text-align:center; display:flex; flex-direction:column; gap:0.4rem;">
+                      <label class="admin-lbl" style="font-weight:700; color:#000040; margin:0; display:block;">${c.label}</label>
+                      <div style="position:relative;">
+                        <img id="prev_${c.id}" src="${store.getCatImg(c.id)}" style="width:100%; height:130px; border-radius:8px; object-fit:cover; border:1px solid #cbd5e1; background:#f8fafc;" onerror="this.src='/images/lens world logo.png';" />
                       </div>
-                      <input type="hidden" id="catimg_${c.id}" value="${store.getCatImg(c.id)}" />
-                      <label class="btn btn-outline btn-sm" style="display:inline-flex; align-items:center; gap:0.3rem; font-size:0.75rem; cursor:pointer; width:100%; justify-content:center; padding:0.4rem 0.5rem; border-color:#cbd5e1; color:#000040;">
-                        📁 Upload from Gallery
+                      <input type="text" id="catimg_${c.id}" value="${store.getCatImg(c.id)}" placeholder="Image URL or upload..." class="admin-input" style="height:30px; font-size:0.72rem; padding:0 0.5rem; width:100%;" oninput="document.getElementById('prev_${c.id}').src = this.value;" />
+                      <label class="btn btn-outline btn-sm" style="display:inline-flex; align-items:center; gap:0.3rem; font-size:0.75rem; cursor:pointer; width:100%; justify-content:center; padding:0.38rem 0.5rem; border-color:#cbd5e1; color:#000040;">
+                        📁 Pick from Gallery
+                        <input type="file" accept="image/*" style="display:none;" onchange="window.handleCategoryFileUpload(event, 'catimg_${c.id}', 'prev_${c.id}')" />
+                      </label>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+
+              <!-- Section D: Homepage Promo Banners -->
+              <div>
+                <h4 style="color:#000040; font-size:0.95rem; margin-bottom:0.75rem; border-bottom:1px solid #e2e8f0; padding-bottom:0.4rem;">
+                  4. Homepage Promotional Banners (Special Features)
+                </h4>
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:1rem;">
+                  ${[
+                    { id: 'banner_new_arrival', label: '✨ New Arrival Banner' },
+                    { id: 'banner_trending', label: '🔥 Trending Styles Banner' }
+                  ].map(c => `
+                    <div class="admin-card-inner" style="background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem; display:flex; flex-direction:column; gap:0.4rem;">
+                      <label class="admin-lbl" style="font-weight:700; color:#000040; margin:0; display:block;">${c.label}</label>
+                      <div style="position:relative;">
+                        <img id="prev_${c.id}" src="${store.getCatImg(c.id)}" style="width:100%; height:130px; border-radius:8px; object-fit:cover; border:1px solid #cbd5e1; background:#f8fafc;" onerror="this.src='/images/lens world logo.png';" />
+                      </div>
+                      <input type="text" id="catimg_${c.id}" value="${store.getCatImg(c.id)}" placeholder="Banner Image URL..." class="admin-input" style="height:30px; font-size:0.72rem; padding:0 0.5rem; width:100%;" oninput="document.getElementById('prev_${c.id}').src = this.value;" />
+                      <label class="btn btn-outline btn-sm" style="display:inline-flex; align-items:center; gap:0.3rem; font-size:0.75rem; cursor:pointer; width:100%; justify-content:center; padding:0.38rem 0.5rem; border-color:#cbd5e1; color:#000040;">
+                        📁 Pick from Gallery
                         <input type="file" accept="image/*" style="display:none;" onchange="window.handleCategoryFileUpload(event, 'catimg_${c.id}', 'prev_${c.id}')" />
                       </label>
                     </div>
@@ -2801,12 +2833,12 @@ export const UI = {
               </div>
 
               <!-- Action Bar -->
-              <div style="display:flex; justify-content:flex-end; gap:0.75rem; border-top:1px solid #e2e8f0; padding-top:1rem;">
+              <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #e2e8f0; padding-top:1rem; flex-wrap:wrap; gap:0.75rem;">
                 <button type="button" class="btn btn-outline btn-sm" onclick="if(confirm('Restore all default model & category images?')){ localStorage.removeItem('lsw_category_images'); window.location.reload(); }">
                   ↺ Restore Default Images
                 </button>
-                <button type="submit" class="btn btn-navy btn-sm" style="height:36px; padding:0 1.5rem;">
-                  💾 Save All Category Photos
+                <button type="submit" class="btn btn-navy btn-sm" style="height:40px; padding:0 1.75rem; font-size:0.85rem; font-weight:700; box-shadow:0 4px 12px rgba(0,0,64,0.2);">
+                  💾 Save All Category Photos & Sync Live
                 </button>
               </div>
             </form>

@@ -1060,7 +1060,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const mainApp = document.getElementById('app-main');
         if (mainApp) mainApp.innerHTML = UI.renderWishlistPage();
       }
-    } else if (event === 'products_updated') {
+    } else if (
+      event === 'products_updated' ||
+      event === 'CATEGORY_IMAGES_UPDATED' ||
+      event === 'categories_updated' ||
+      event === 'settings_updated' ||
+      event === 'lens_packages_updated'
+    ) {
       const hash = window.location.hash || '';
       if (!hash.startsWith('#admin')) {
         handleRoute();
@@ -1116,6 +1122,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 5. Initialize SPA Hash Router
   initRouter();
+
+  // 6. Realtime Cross-Device Cloud Sync Poller (Every 25 seconds)
+  setInterval(() => {
+    if (!document.hidden) {
+      store.fetchSiteConfigsFromSupabase();
+      store.fetchProductsFromSupabase();
+      store.fetchCouponsFromSupabase();
+    }
+  }, 25000);
 });
 
 // ==========================================================================
@@ -1896,9 +1911,88 @@ window.saveStoreSettingsForm = function(event) {
   if (mainApp) mainApp.innerHTML = UI.renderAdminDashboard('settings');
 };
 
-// Save Category & Demographic Banner Photos Handler
-window.saveCategoryImagesForm = function(event) {
+// Client-side image compression helper (avoids localStorage quota overflow and speeds up cloud sync)
+window.compressImageFile = function(file, maxWidth = 800, maxHeight = 800, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type || !file.type.startsWith('image/')) {
+      return reject(new Error('Selected file is not an image'));
+    }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Failed to load image into canvas'));
+      img.onload = () => {
+        try {
+          let { width, height } = img;
+          if (width > maxWidth || height > maxHeight) {
+            if (width / maxWidth > height / maxHeight) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            } else {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          let dataUrl = canvas.toDataURL('image/webp', quality);
+          if (!dataUrl || dataUrl.startsWith('data:image/png')) {
+            dataUrl = canvas.toDataURL('image/jpeg', quality);
+          }
+          resolve(dataUrl);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+};
+
+// Direct Gallery / File Upload with Auto-compression
+window.handleCategoryFileUpload = async function(event, inputId, previewImgId) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const prevEl = document.getElementById(previewImgId);
+  const inputEl = document.getElementById(inputId);
+  if (prevEl) prevEl.style.opacity = '0.5';
+  store.showToast('⏳ Compressing & optimizing photo...', 'info');
+
+  try {
+    const compressedDataUrl = await window.compressImageFile(file, 800, 800, 0.82);
+    if (inputEl) {
+      inputEl.value = compressedDataUrl;
+      inputEl.dispatchEvent(new Event('input'));
+    }
+    if (prevEl) {
+      prevEl.src = compressedDataUrl;
+      prevEl.style.opacity = '1';
+    }
+    store.showToast('✓ Photo ready! Click "Save All Category Photos" to sync live to cloud.', 'success');
+  } catch (err) {
+    console.error('Image upload compression error:', err);
+    if (prevEl) prevEl.style.opacity = '1';
+    store.showToast('⚠️ Image processing error: ' + err.message, 'error');
+  }
+};
+
+// Save Category & Demographic Banner Photos Handler (with Async Live Cloud Sync)
+window.saveCategoryImagesForm = async function(event) {
   event.preventDefault();
+
+  const submitBtn = event.target.querySelector('button[type="submit"]');
+  const originalBtnHtml = submitBtn ? submitBtn.innerHTML : '💾 Save All Category Photos';
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '⏳ Syncing Live to Supabase DB...';
+  }
 
   const getVal = (id, fallback = '') => {
     const el = document.getElementById(id);
@@ -1906,7 +2000,7 @@ window.saveCategoryImagesForm = function(event) {
   };
 
   const updatedImages = {
-    // Circles (Eyeglasses, Sunglasses, Power Specs, Contact Lens, Readers, Lens, Accessories)
+    // 1. Top Story Circles (Eyeglasses, Sunglasses, Power Specs, Contact Lens, Readers, Lens, Accessories)
     story_eyeglasses: getVal('catimg_story_eyeglasses'),
     story_sunglasses: getVal('catimg_story_sunglasses'),
     story_power_specs: getVal('catimg_story_power_specs'),
@@ -1915,45 +2009,46 @@ window.saveCategoryImagesForm = function(event) {
     story_lenses: getVal('catimg_story_lenses'),
     story_accessories: getVal('catimg_story_accessories'),
 
-    // Eyeglasses
+    // 2. Eyeglasses Demographic Grid
     eye_men: getVal('catimg_eye_men'),
     eye_women: getVal('catimg_eye_women'),
     eye_kids: getVal('catimg_eye_kids'),
     eye_unisex: getVal('catimg_eye_unisex'),
     eye_couple: getVal('catimg_eye_couple'),
 
-    // Sunglasses
+    // 3. Sunglasses Demographic & Collection Grid
     sun_men: getVal('catimg_sun_men'),
     sun_women: getVal('catimg_sun_women'),
     sun_kids: getVal('catimg_sun_kids'),
     sun_unisex: getVal('catimg_sun_unisex'),
     sun_couple: getVal('catimg_sun_couple'),
     sun_clipon: getVal('catimg_sun_clipon'),
-    sun_sports: getVal('catimg_sun_sports')
+    sun_sports: getVal('catimg_sun_sports'),
+    sun_meta_ai: getVal('catimg_sun_meta_ai'),
+
+    // 4. Promo Banners
+    banner_new_arrival: getVal('catimg_banner_new_arrival'),
+    banner_trending: getVal('catimg_banner_trending')
   };
 
-  store.saveCategoryImages(updatedImages);
-  store.showToast('✓ Category & Model Photos Saved Successfully!', 'success');
-
-  const mainApp = document.getElementById('app-main');
-  if (mainApp) mainApp.innerHTML = UI.renderAdminDashboard('category_images');
-};
-
-// Direct Gallery / File Upload for Category & Demographic Photos
-window.handleCategoryFileUpload = function(event, inputId, previewImgId) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const dataUrl = e.target.result;
-    const inputEl = document.getElementById(inputId);
-    const prevEl = document.getElementById(previewImgId);
-    if (inputEl) inputEl.value = dataUrl;
-    if (prevEl) prevEl.src = dataUrl;
-    store.showToast('✓ Photo loaded from device! Click "Save" below to apply.', 'info');
-  };
-  reader.readAsDataURL(file);
+  try {
+    const result = await store.saveCategoryImages(updatedImages, true);
+    if (result && result.success) {
+      store.showToast('✓ All Category & Model Photos Live Synced to Supabase DB!', 'success');
+    } else {
+      store.showToast('⚠️ Saved locally. Cloud sync notice: ' + (result?.error || 'Check network'), 'warning');
+    }
+  } catch (err) {
+    console.error('Error saving category images:', err);
+    store.showToast('⚠️ Sync error: ' + err.message, 'error');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalBtnHtml;
+    }
+    const mainApp = document.getElementById('app-main');
+    if (mainApp) mainApp.innerHTML = UI.renderAdminDashboard('category_images');
+  }
 };
 
 // Global showToast helper

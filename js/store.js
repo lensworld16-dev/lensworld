@@ -187,23 +187,34 @@ class Store {
     this.fetchCouponsFromSupabase();
   }
 
-  saveCategoryImages(images, syncCloud = true) {
+  async saveCategoryImages(images, syncCloud = true) {
     this.categoryImages = { ...this.categoryImages, ...images };
     try {
       localStorage.setItem("lsw_category_images", JSON.stringify(this.categoryImages));
     } catch (e) {
-      console.warn("Storage write error", e);
+      console.warn("Storage write notice (quota or private mode):", e);
     }
     this.notify("CATEGORY_IMAGES_UPDATED", this.categoryImages);
 
     if (syncCloud) {
-      fetch('/api/site-config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: 'category_images', data: this.categoryImages })
-      }).then(() => console.log('✓ Category & Model photos synced to Supabase DB'))
-        .catch(err => console.warn('Supabase category images sync notice:', err));
+      try {
+        const res = await fetch('/api/site-config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'category_images', data: this.categoryImages })
+        });
+        const result = await res.json();
+        if (!res.ok || !result.success) {
+          throw new Error(result.error || result.details || 'Failed to sync to Supabase');
+        }
+        console.log('✓ Category & Model photos synced live to Supabase DB');
+        return { success: true, data: this.categoryImages };
+      } catch (err) {
+        console.error('Supabase category images sync error:', err);
+        return { success: false, error: err.message };
+      }
     }
+    return { success: true };
   }
 
   getCatImg(key, fallback = "") {
@@ -270,20 +281,31 @@ class Store {
     }
   }
 
-  saveCategories(syncCloud = true) {
+  async saveCategories(syncCloud = true) {
     try {
       localStorage.setItem("lsw_categories", JSON.stringify(this.categories));
     } catch (e) {
-      console.error(e);
+      console.warn("Storage write error", e);
     }
+    this.notify("categories_updated", this.categories);
+
     if (syncCloud) {
-      fetch('/api/site-config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: 'categories', data: this.categories })
-      }).then(() => console.log('✓ Categories synced to Supabase DB'))
-        .catch(err => console.warn('Supabase categories sync notice:', err));
+      try {
+        const res = await fetch('/api/site-config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'categories', data: this.categories })
+        });
+        const result = await res.json();
+        if (!res.ok || !result.success) throw new Error(result.error || 'Failed to sync categories');
+        console.log('✓ Categories synced to Supabase DB');
+        return { success: true };
+      } catch (err) {
+        console.error('Supabase categories sync notice:', err);
+        return { success: false, error: err.message };
+      }
     }
+    return { success: true };
   }
 
   saveLensPackages() {
@@ -302,20 +324,31 @@ class Store {
     }
   }
 
-  saveStoreSettings(syncCloud = true) {
+  async saveStoreSettings(syncCloud = true) {
     try {
       localStorage.setItem("lsw_settings", JSON.stringify(this.storeSettings));
     } catch (e) {
-      console.error(e);
+      console.warn("Storage write error", e);
     }
+    this.notify("settings_updated", this.storeSettings);
+
     if (syncCloud) {
-      fetch('/api/site-config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: 'store_settings', data: this.storeSettings })
-      }).then(() => console.log('✓ Store settings synced to Supabase DB'))
-        .catch(err => console.warn('Supabase store settings sync notice:', err));
+      try {
+        const res = await fetch('/api/site-config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'store_settings', data: this.storeSettings })
+        });
+        const result = await res.json();
+        if (!res.ok || !result.success) throw new Error(result.error || 'Failed to sync settings');
+        console.log('✓ Store settings synced to Supabase DB');
+        return { success: true };
+      } catch (err) {
+        console.error('Supabase store settings sync notice:', err);
+        return { success: false, error: err.message };
+      }
     }
+    return { success: true };
   }
 
   // Toast Notification
