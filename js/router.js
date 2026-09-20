@@ -2,12 +2,25 @@
 import { UI } from './ui.js';
 import { store } from './store.js';
 
-export function handleRoute() {
+let currentRouteKey = null;
+
+export function handleRoute(options = {}) {
   const mainApp = document.getElementById('app-main');
   if (!mainApp) return;
 
-  // Scroll to top
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Determine current route key
+  const activeHash = window.location.hash || '#home';
+  const newRouteKey = (window.location.pathname && window.location.pathname.startsWith('/order-success'))
+    ? window.location.pathname + window.location.search
+    : activeHash;
+
+  const isRouteChange = (newRouteKey !== currentRouteKey);
+  currentRouteKey = newRouteKey;
+
+  // Scroll to top ONLY on genuine route change and if not explicitly disabled
+  if ((isRouteChange && options.scrollToTop !== false) || options.scrollToTop === true) {
+    window.scrollTo(0, 0);
+  }
 
   // Parse path & params (supports both hash routing and Cashfree return_url pathname)
   let path = '';

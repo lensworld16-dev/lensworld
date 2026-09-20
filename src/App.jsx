@@ -38,7 +38,7 @@ function AppContent() {
 
   // Scroll to top on route change
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo(0, 0);
   }, [currentRoute]);
 
   // Scroll listener for back-to-top button

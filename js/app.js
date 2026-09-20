@@ -1067,10 +1067,7 @@ document.addEventListener('DOMContentLoaded', () => {
       event === 'settings_updated' ||
       event === 'lens_packages_updated'
     ) {
-      const hash = window.location.hash || '';
-      if (!hash.startsWith('#admin')) {
-        handleRoute();
-      }
+      // Background data sync updates store state silently without tearing down user's active viewport or scrolling
     }
   });
 
