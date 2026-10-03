@@ -7,7 +7,7 @@ class Store {
 
     // 1. Products State
     try {
-      const CATALOG_VERSION = "2026.09.v4_unique";
+      const CATALOG_VERSION = "2026.10.v5_price_refresh";
       const storedVersion = localStorage.getItem("lsw_catalog_version");
       if (storedVersion !== CATALOG_VERSION) {
         localStorage.setItem("lsw_catalog_version", CATALOG_VERSION);
