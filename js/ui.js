@@ -37,6 +37,102 @@ export const UI = {
     }
   },
 
+  // Live Dynamic Refresh for visible products, cards, and prices across active viewport
+  refreshProductsInView() {
+    // 1. Update all rendered product cards on the screen
+    document.querySelectorAll('.product-card[data-product-id]').forEach(card => {
+      const pid = card.getAttribute('data-product-id');
+      const p = store.products.find(x => x.id === pid);
+      if (!p) {
+        // Product was deleted from database, remove card smoothly
+        card.remove();
+        return;
+      }
+
+      // Update current price & MRP
+      const curPriceEl = card.querySelector('.price-current');
+      if (curPriceEl) curPriceEl.textContent = this.formatPrice(p.price);
+
+      const mrpEl = card.querySelector('.price-mrp');
+      if (mrpEl) {
+        if (p.mrp && p.mrp > p.price) {
+          mrpEl.textContent = this.formatPrice(p.mrp);
+          mrpEl.style.display = '';
+        } else {
+          mrpEl.style.display = 'none';
+        }
+      }
+
+      // Update discount badge
+      const badgeEl = card.querySelector('.product-badge-pill');
+      if (badgeEl) {
+        const discount = this.getDiscount(p.price, p.mrp);
+        badgeEl.textContent = p.isNew ? 'New' : (discount ? `${discount}% off` : (p.badge || 'New'));
+      }
+
+      // Update title
+      const titleEl = card.querySelector('.product-title');
+      if (titleEl && p.name && titleEl.textContent !== p.name) {
+        titleEl.textContent = p.name;
+      }
+
+      // Update image
+      const imgEl = card.querySelector('.product-thumb img');
+      if (imgEl && p.img && imgEl.getAttribute('src') !== p.img) {
+        imgEl.src = p.img;
+      }
+    });
+
+    // 2. If on PDP (Product Detail Page), update prices and details
+    const activeHash = window.location.hash || '';
+    if (activeHash.startsWith('#product/')) {
+      const currentPdpId = activeHash.replace('#product/', '').split('?')[0];
+      const currentProd = store.products.find(x => x.id === currentPdpId);
+      if (currentProd) {
+        const pdpCurrentPriceEl = document.querySelector('.pdp-current-price');
+        if (pdpCurrentPriceEl) pdpCurrentPriceEl.textContent = this.formatPrice(currentProd.price);
+
+        const pdpMrpEl = document.querySelector('.pdp-mrp-price');
+        if (pdpMrpEl) {
+          if (currentProd.mrp && currentProd.mrp > currentProd.price) {
+            pdpMrpEl.textContent = this.formatPrice(currentProd.mrp);
+            pdpMrpEl.style.display = '';
+          } else {
+            pdpMrpEl.style.display = 'none';
+          }
+        }
+
+        const pdpBadgeEl = document.querySelector('.pdp-floating-badge');
+        const discount = this.getDiscount(currentProd.price, currentProd.mrp);
+        if (pdpBadgeEl && discount) {
+          pdpBadgeEl.textContent = `${discount}% OFF`;
+          pdpBadgeEl.style.display = '';
+        }
+
+        const finalTotalEl = document.getElementById('pdp-final-total');
+        if (finalTotalEl && !document.querySelector('.pill-chip.active:not([data-type="standard"])')) {
+          finalTotalEl.textContent = this.formatPrice(currentProd.price);
+        }
+      }
+    }
+
+    // 3. If on #shop, refresh grid cleanly to match filter & pagination
+    if (activeHash.startsWith('#shop')) {
+      const scrollY = window.scrollY;
+      const [_, queryString] = activeHash.split('?');
+      const params = new URLSearchParams(queryString || '');
+      const category = params.get('category') || 'all';
+      const gender = params.get('gender') || 'all';
+      const tag = params.get('tag') || 'all';
+      const sort = params.get('sort') || 'latest';
+      const mainApp = document.getElementById('app-main');
+      if (mainApp) {
+        mainApp.innerHTML = this.renderShopPage({ category, gender, tag, sort });
+        window.scrollTo(0, scrollY);
+      }
+    }
+  },
+
   // Render Clean Product Card (Edge-to-Edge Full Cover Image)
   renderProductCard(product) {
     const isWishlisted = store.isInWishlist(product.id);

@@ -1060,8 +1060,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const mainApp = document.getElementById('app-main');
         if (mainApp) mainApp.innerHTML = UI.renderWishlistPage();
       }
+    } else if (event === 'products_updated') {
+      UI.refreshProductsInView();
     } else if (
-      event === 'products_updated' ||
       event === 'CATEGORY_IMAGES_UPDATED' ||
       event === 'categories_updated' ||
       event === 'settings_updated' ||

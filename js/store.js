@@ -1,13 +1,19 @@
 // LENS S WORLD - Reactive State Manager (LocalStorage Powered)
 import { INITIAL_PRODUCTS, INITIAL_MOCK_ORDERS, COUPONS, STORE_INFO, CATEGORIES, LENS_PACKAGES, DEFAULT_CATEGORY_IMAGES, getProductImgHash } from './data.js';
 
+const PURGED_PRODUCT_IDS = new Set([
+  'lens-s-world-microfiber-cleaning-cloth',
+  'lens-s-world-magnetic-clipon-sunglasses',
+  'lens-s-world-meta-ai-smart-sunglasses'
+]);
+
 class Store {
   constructor() {
     this.listeners = new Set();
 
     // 1. Products State
     try {
-      const CATALOG_VERSION = "2026.10.v5_price_refresh";
+      const CATALOG_VERSION = "2026.10.v8_purge_obsolete_cloth";
       const storedVersion = localStorage.getItem("lsw_catalog_version");
       if (storedVersion !== CATALOG_VERSION) {
         localStorage.setItem("lsw_catalog_version", CATALOG_VERSION);
@@ -16,80 +22,24 @@ class Store {
       }
 
       const deletedIds = new Set(JSON.parse(localStorage.getItem("lsw_deleted_products") || "[]"));
+      PURGED_PRODUCT_IDS.forEach(id => deletedIds.add(id));
+      localStorage.setItem("lsw_deleted_products", JSON.stringify(Array.from(deletedIds)));
+
       const saved = localStorage.getItem("lsw_products");
       
       if (saved) {
         const parsed = JSON.parse(saved);
-        const initialMap = new Map(INITIAL_PRODUCTS.map(p => [p.id, p]));
-        const resultList = [];
-        const seenIds = new Set();
-
-        // 1. Keep valid custom products or edited products, strictly rejecting obsolete legacy -frame- items
-        parsed.forEach(p => {
-          if (!p || !p.id || deletedIds.has(p.id) || seenIds.has(p.id)) return;
-          // Filter out obsolete legacy products whose images were removed
-          if (
-            p.id.includes('-frame-') ||
-            (p.img && (
-              p.img.includes('/images/products/womens/') ||
-              p.img.includes('/images/products/kids/') ||
-              p.img.includes('/images/products/readers/') ||
-              p.img.includes('/images/products/sports/') ||
-              p.img.includes('/images/products/unisex/')
-            ))
-          ) return;
-
-          // Purge mock Meta AI product from cached storage
-          if (p.id === 'lens-s-world-meta-ai-smart-sunglasses') return;
-
-          seenIds.add(p.id);
-          const isFeat = p.featured !== undefined ? Boolean(p.featured) : Boolean(p.isFeatured);
-          const imgPath = p.img || (initialMap.get(p.id)?.img);
-          const computedHash = getProductImgHash({ ...p, img: imgPath });
-
-          if (initialMap.has(p.id)) {
-            const orig = initialMap.get(p.id);
-            resultList.push({
-              ...orig,
-              ...p,
-              img: imgPath || orig.img,
-              imgHash: computedHash || orig.imgHash,
-              gallery: (p.gallery && p.gallery.length > 0) ? p.gallery : [imgPath || orig.img],
-              featured: isFeat,
-              isFeatured: isFeat,
-              bestSeller: p.bestSeller !== undefined ? Boolean(p.bestSeller) : isFeat
-            });
-          } else {
-            resultList.push({
-              ...p,
-              imgHash: computedHash,
-              featured: isFeat,
-              isFeatured: isFeat,
-              bestSeller: p.bestSeller !== undefined ? Boolean(p.bestSeller) : isFeat
-            });
-          }
-        });
-
-        // 2. Append all fresh INITIAL_PRODUCTS
-        INITIAL_PRODUCTS.forEach(orig => {
-          if (!seenIds.has(orig.id) && !deletedIds.has(orig.id)) {
-            seenIds.add(orig.id);
-            orig.imgHash = getProductImgHash(orig) || orig.imgHash;
-            resultList.push(orig);
-          }
-        });
-
-        this.products = resultList;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.products = parsed.filter(p => p && p.id && !deletedIds.has(p.id) && !PURGED_PRODUCT_IDS.has(p.id));
+        } else {
+          this.products = INITIAL_PRODUCTS.filter(p => p && p.id && !deletedIds.has(p.id) && !PURGED_PRODUCT_IDS.has(p.id));
+        }
       } else {
-        this.products = INITIAL_PRODUCTS.filter(p => !deletedIds.has(p.id)).map(p => ({
-          ...p,
-          imgHash: getProductImgHash(p) || p.imgHash
-        }));
+        this.products = INITIAL_PRODUCTS.filter(p => p && p.id && !deletedIds.has(p.id) && !PURGED_PRODUCT_IDS.has(p.id));
       }
-      this.saveProducts();
     } catch (e) {
       console.warn("Storage restore notice, using base catalog:", e);
-      this.products = INITIAL_PRODUCTS;
+      this.products = INITIAL_PRODUCTS.filter(p => p && p.id && !PURGED_PRODUCT_IDS.has(p.id));
     }
 
     // 2. Cart State
@@ -666,7 +616,7 @@ class Store {
         const deletedIds = new Set(JSON.parse(localStorage.getItem("lsw_deleted_products") || "[]"));
         
         const dbProds = data.products
-          .filter(p => p && p.id && p.category !== 'lens-package' && p.category !== 'site-config' && !deletedIds.has(p.id))
+          .filter(p => p && p.id && p.category !== 'lens-package' && p.category !== 'site-config' && !deletedIds.has(p.id) && !PURGED_PRODUCT_IDS.has(p.id))
           .map(p => {
             const imgs = Array.isArray(p.images) && p.images.length > 0 
               ? p.images 
